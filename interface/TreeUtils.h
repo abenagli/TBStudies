@@ -27,7 +27,9 @@ struct TreeVars
   std::map<std::string,int> timeMethodIds;
   std::map<std::string,float> VbiasVals;
   std::map<std::string,float> NINOthrVals;
-  
+
+  float tableX;
+  float tableY;
   float beamX;
   float beamY;
 };

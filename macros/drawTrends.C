@@ -141,7 +141,7 @@ void drawTrends(const std::string& fileName)
       g_vs_Vbias_CTR_distAmpCorr_gausSigma[t_NINOthr] -> SetPointError(g_vs_Vbias_CTR_distAmpCorr_gausSigma[t_NINOthr]->GetN()-1,0.,t_CTR_distAmpCorr_gausSigmaErr);
     }
     
-
+    
     
     for(auto it : vec_NINOthr)
     {
@@ -151,10 +151,11 @@ void drawTrends(const std::string& fileName)
       TCanvas* c_vs_NINOthr = new TCanvas(Form("c_Vbias%.0f_vs_NINOthr_%s",Vbias,ch.c_str()),Form("c_Vbias%.0f_vs_NINOthr_%s",Vbias,ch.c_str()),1000,500);
       c_vs_NINOthr -> cd();
       
-      TH1F* hPad = (TH1F*)( gPad->DrawFrame(0.,10.,1.5*vec_NINOthr[Vbias].at(vec_NINOthr[Vbias].size()-1),200.) );
+      TH1F* hPad = (TH1F*)( gPad->DrawFrame(0.,10.,1.5*vec_NINOthr[Vbias].at(vec_NINOthr[Vbias].size()-1),180.) );
       hPad -> SetTitle(";NINO thr. [mV];time resolution [ps]");
       hPad -> Draw();
 
+      gPad -> SetGridy();
       
       g_vs_NINOthr_CTR_effSigma[Vbias] -> SetMarkerStyle(20);
       g_vs_NINOthr_CTR_effSigma[Vbias] -> SetMarkerColor(kBlack);
@@ -207,7 +208,7 @@ void drawTrends(const std::string& fileName)
       legend -> AddEntry(g_vs_NINOthr_CTR_distAmpCorr_gausSigma[Vbias],"amp. walk & pos. corr - gaus #sigma","P");
       legend -> Draw("same");
 
-      TLatex* latexLabel2 = new TLatex(0.20,0.80,Form("V_{bias} = %.0f V",Vbias));
+      TLatex* latexLabel2 = new TLatex(0.25,0.85,Form("V_{bias} = %.0f V",Vbias));
       latexLabel2 -> SetNDC();
       latexLabel2 -> SetTextFont(42);
       latexLabel2 -> SetTextSize(0.05);
@@ -227,10 +228,11 @@ void drawTrends(const std::string& fileName)
       TCanvas* c_vs_Vbias = new TCanvas(Form("c_NINOthr%.0f_vs_Vbias_%s",NINOthr,ch.c_str()),Form("c_NINOthr%.0f_vs_Vbias_%s",NINOthr,ch.c_str()),1000,500);
       c_vs_Vbias -> cd();
       
-      TH1F* hPad = (TH1F*)( gPad->DrawFrame(0.,10.,1.5*vec_Vbias[NINOthr].at(vec_Vbias[NINOthr].size()-1),200.) );
+      TH1F* hPad = (TH1F*)( gPad->DrawFrame(20.,10.,1.5*vec_Vbias[NINOthr].at(vec_Vbias[NINOthr].size()-1),180.) );
       hPad -> SetTitle(";V_{bias} [V];time resolution [ps]");
       hPad -> Draw();
       
+      gPad -> SetGridy();
       
       g_vs_Vbias_CTR_effSigma[NINOthr] -> SetMarkerStyle(20);
       g_vs_Vbias_CTR_effSigma[NINOthr] -> SetMarkerColor(kBlack);
@@ -283,7 +285,7 @@ void drawTrends(const std::string& fileName)
       legend -> AddEntry(g_vs_Vbias_CTR_distAmpCorr_gausSigma[NINOthr],"amp. walk & pos. corr - gaus #sigma","P");
       legend -> Draw("same");
 
-      TLatex* latexLabel2 = new TLatex(0.20,0.80,Form("NINO thr. = %.0f mV",NINOthr));
+      TLatex* latexLabel2 = new TLatex(0.25,0.85,Form("NINO thr. = %.0f mV",NINOthr));
       latexLabel2 -> SetNDC();
       latexLabel2 -> SetTextFont(42);
       latexLabel2 -> SetTextSize(0.05);

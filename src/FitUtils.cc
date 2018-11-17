@@ -76,6 +76,8 @@ void FindSmallestInterval(float* ret, TH1F* histo, const float& fraction)
   ret[3] = RMSErr;
   ret[4] = min;
   ret[5] = max;
+
+  std::cout << "mean: " << mean << "   min: " << min << "   max: " << max << std::endl;
 }
 
 
@@ -319,6 +321,27 @@ void DrawHistogram2D(CfgManager& opts,
   
   if( latexLabel != NULL ) latexLabel -> Draw("same");
   
+  TH1F* h_spread = new TH1F("h_spread","",100,zMin,zMax);
+  for(int ii = 1; ii <= histo2->GetNbinsX(); ++ii)
+    for(int jj = 1; jj <= histo2->GetNbinsY(); ++jj)
+    {
+      float val = histo2 -> GetBinContent(ii,jj);
+      h_spread -> Fill(val);
+    }
+  TLatex* latex_mean = new TLatex(0.19,0.83,Form("mean = %.2e",h_spread->GetMean()));  
+  latex_mean -> SetNDC();
+  latex_mean -> SetTextFont(42);
+  latex_mean -> SetTextSize(0.04);
+  latex_mean -> Draw("same");
+  TLatex* latex_rms = new TLatex(0.19,0.78,Form("rms = %.3e",h_spread->GetRMS()));
+  latex_rms -> Draw("same");
+  latex_rms -> SetNDC();
+  latex_rms -> SetTextFont(42);
+  latex_rms -> SetTextSize(0.04);
+  delete h_spread;
+  
+  if( latexLabel != NULL ) latexLabel -> Draw("same");
+  
   gPad -> Update();
 }
 
@@ -373,6 +396,25 @@ void DrawProfile2D(CfgManager& opts,
   prof2 -> SetMinimum(zMin);
   prof2 -> SetMaximum(zMax);
   prof2 -> Draw("COLZ");
+  
+  TH1F* h_spread = new TH1F("h_spread","",100,zMin,zMax);
+  for(int ii = 1; ii <= prof2->GetNbinsX(); ++ii)
+    for(int jj = 1; jj <= prof2->GetNbinsY(); ++jj)
+    {
+      float val = prof2 -> GetBinContent(ii,jj);
+      h_spread -> Fill(val);
+    }
+  TLatex* latex_mean = new TLatex(0.19,0.83,Form("mean = %.1e",h_spread->GetMean()));  
+  latex_mean -> SetNDC();
+  latex_mean -> SetTextFont(42);
+  latex_mean -> SetTextSize(0.04);
+  latex_mean -> Draw("same");
+  TLatex* latex_rms = new TLatex(0.19,0.78,Form("rms = %.2e",h_spread->GetRMS()));
+  latex_rms -> Draw("same");
+  latex_rms -> SetNDC();
+  latex_rms -> SetTextFont(42);
+  latex_rms -> SetTextSize(0.04);
+  delete h_spread;
   
   if( latexLabel != NULL ) latexLabel -> Draw("same");
   

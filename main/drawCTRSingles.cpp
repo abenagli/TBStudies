@@ -226,6 +226,10 @@ int main(int argc, char** argv)
   std::map<std::string,TProfile*> p_time_distRTCorr_vs_amp;
   std::map<std::string,TProfile*> p_time_distRTCorr_vs_RT;
   std::map<std::string,TProfile*> p_time_distRTCorr_vs_dist;
+
+  std::map<std::string,TH1F*> h_occupancyX;
+  std::map<std::string,TH1F*> h_occupancyY;  
+  std::map<std::string,TH2F*> h2_occupancyXY;
   
   std::map<std::string,TH1F*> h_chessOccupancyX;
   std::map<std::string,TH1F*> h_chessOccupancyY;
@@ -312,6 +316,10 @@ int main(int argc, char** argv)
     
     h_CTR_raw[ch] = new TH1F(Form("h_CTR_raw_%s",ch.c_str()),"",10000,-50.,50.);
     
+    h_occupancyX[ch]   = new TH1F(Form("h_occupancyX_%s",ch.c_str()),  "",1.*(xtalXMax-xtalXMin),xtalXMin,xtalXMax);
+    h_occupancyY[ch]   = new TH1F(Form("h_occupancyY_%s",ch.c_str()),  "",1.*(xtalYMax-xtalYMin),xtalYMin,xtalYMax);    
+    h2_occupancyXY[ch] = new TH2F(Form("h2_occupancyXY_%s",ch.c_str()),"",1.*(xtalXMax-xtalXMin),xtalXMin,xtalXMax,1.*(xtalYMax-xtalYMin),xtalYMin,xtalYMax);
+          
     int nBinsX = opts.GetOpt<int>(Form("%s.nBinsX",ch.c_str()));
     int nBinsY = opts.GetOpt<int>(Form("%s.nBinsY",ch.c_str()));
 
@@ -377,8 +385,8 @@ int main(int argc, char** argv)
       {
         if( (tv.nFibresOnX[hodoPlane] < nFibresMin || tv.nFibresOnX[hodoPlane] > nFibresMax) ) continue;
         if( (tv.nFibresOnY[hodoPlane] < nFibresMin || tv.nFibresOnY[hodoPlane] > nFibresMax) ) continue;
-        if( fabs((tv.hodoX[1]-tv.hodoX[0]-3.50)) > 2. ) continue;
-        if( fabs((tv.hodoY[1]-tv.hodoY[0]-0.12)) > 2. ) continue;
+        // if( fabs((tv.hodoX[1]-tv.hodoX[0]-3.50)) > 2. ) continue;
+        // if( fabs((tv.hodoY[1]-tv.hodoY[0]-0.12)) > 2. ) continue;
       }
       
       // fill amplitude and time plots
@@ -546,10 +554,10 @@ int main(int argc, char** argv)
     c = new TCanvas(); DrawHistogram(opts,ch,h_amp[ch],     ";amplitude [V];entries", 0.,1.1*ampMax,4,true,latexLabels[ch],&lines_amp);  PrintCanvas(c,opts,ch,plotDir,"1_amp");      delete c;
     c = new TCanvas(); DrawHistogram(opts,ch,h_time[ch],    ";time [ns];entries",     0.,200.,      1,true,latexLabels[ch],&lines_time); PrintCanvas(c,opts,ch,plotDir,"1_time");     delete c;
     c = new TCanvas(); DrawHistogram(opts,ch,h_tot[ch],     ";ToT [ns];entries",      0.,200.,      1,true,latexLabels[ch],&lines_tot);  PrintCanvas(c,opts,ch,plotDir,"1_tot");      delete c;
-    c = new TCanvas(); DrawHistogram(opts,ch,h_RT[ch],      ";rise time [ns];entries",0.,100.,      1,true,latexLabels[ch],&lines_rt);   PrintCanvas(c,opts,ch,plotDir,"1_RT");       delete c;
+    c = new TCanvas(); DrawHistogram(opts,ch,h_RT[ch],      ";rise time [ns];entries",rtMin,rtMax,  1,true,latexLabels[ch],&lines_rt);   PrintCanvas(c,opts,ch,plotDir,"1_RT");       delete c;
     
     c = new TCanvas();
-    DrawHistogram2D(opts,ch,h2_tot_vs_amp[ch],";amplitude [V];ToT [ns];entries",ampMin,ampMax,80.,160.,h2_tot_vs_amp[ch]->GetMinimum(),h2_tot_vs_amp[ch]->GetMaximum(),false,false,"colz",latexLabels[ch]);
+    DrawHistogram2D(opts,ch,h2_tot_vs_amp[ch],";amplitude [V];ToT [ns];entries",ampMin,ampMax,0.,200.,h2_tot_vs_amp[ch]->GetMinimum(),h2_tot_vs_amp[ch]->GetMaximum(),false,false,"colz",latexLabels[ch]);
     PrintCanvas(c,opts,ch,plotDir,"1_tot_vs_amp");
     delete c;
 
@@ -615,6 +623,7 @@ int main(int argc, char** argv)
   
   
   //--- 2nd loop over events
+  std::map<std::string,int> nSelectedEntries;
   for(int entry = 0; entry < nEntries; ++entry)
   {
     if( entry%1000 == 0 ) std::cout << ">>> 2nd loop: reading entry " << entry << " / " << nEntries << "\r" << std::flush;
@@ -659,9 +668,15 @@ int main(int argc, char** argv)
       int binX = h_chessOccupancyX[ch] -> Fill(tv.beamX);
       int binY = h_chessOccupancyY[ch] -> Fill(tv.beamY);
       h2_chessOccupancyXY[ch] -> Fill(tv.beamX,tv.beamY);
-      
-      std::string label(Form("%s_%d-%d",ch.c_str(),binX-1,binY-1));
-      map_p_time_vs_amp[label] -> Fill( av.amp,av.time-av.timeRef );
+
+      nSelectedEntries[ch] += 1;
+      h2_occupancyXY[ch] -> Fill(tv.beamX,tv.beamY);
+
+      if( binX >= 0 && binY >= 0 )
+      {
+        std::string label(Form("%s_%d-%d",ch.c_str(),binX-1,binY-1));
+        map_p_time_vs_amp[label] -> Fill( av.amp,av.time-av.timeRef );
+      }
     }
   }
   std::cout << "\n>>> end 2nd loop" << std::endl;
@@ -794,7 +809,13 @@ int main(int argc, char** argv)
     c = new TCanvas();
     DrawHistogram2D(opts,ch,h2_chessOccupancyXY[ch],";hodoscope x [mm];hodoscope y [mm];entries",xtalXMin,xtalXMax,xtalYMin,xtalYMax,h2_chessOccupancyXY[ch]->GetMinimum(),h2_chessOccupancyXY[ch]->GetMaximum(),false,false,"colz",latexLabels[ch]);
     PrintCanvas(c,opts,ch,plotDir,"2_chessOccupancyXY");
-    delete c;    
+    delete c;
+
+    
+    c = new TCanvas();
+    DrawHistogram2D(opts,ch,h2_occupancyXY[ch],";hodoscope x [mm];hodoscope y [mm];entries",xtalXMin,xtalXMax,xtalYMin,xtalYMax,h2_occupancyXY[ch]->GetMinimum(),h2_occupancyXY[ch]->GetMaximum(),false,false,"colz",latexLabels[ch]);
+    PrintCanvas(c,opts,ch,plotDir,"2_occupancyXY");
+    delete c;
   }
   
   
@@ -819,6 +840,12 @@ int main(int argc, char** argv)
     h_CTR_RTCorr[ch]  = new TH1F(Form("h_CTR_RTCorr_%s",ch.c_str()), "",1000,CTRRanges_mean[ch]-5.*CTRRanges_sigma[ch],CTRRanges_mean[ch]+5.*CTRRanges_sigma[ch]);
     h_CTR_distAmpCorr[ch] = new TH1F(Form("h_CTR_distAmpCorr_%s",ch.c_str()),"",1000,CTRRanges_mean[ch]-5.*CTRRanges_sigma[ch],CTRRanges_mean[ch]+5.*CTRRanges_sigma[ch]);
     h_CTR_distRTCorr[ch] = new TH1F(Form("h_CTR_distRTCorr_%s",ch.c_str()),"",1000,CTRRanges_mean[ch]-5.*CTRRanges_sigma[ch],CTRRanges_mean[ch]+5.*CTRRanges_sigma[ch]);
+
+    h_CTR[ch] -> Sumw2();
+    h_CTR_ampCorr[ch] -> Sumw2();
+    h_CTR_RTCorr[ch]  -> Sumw2();
+    h_CTR_distAmpCorr[ch] -> Sumw2();
+    h_CTR_distRTCorr[ch] -> Sumw2();
     
     int nBinsX = opts.GetOpt<int>(Form("%s.nBinsX",ch.c_str()));
     int nBinsY = opts.GetOpt<int>(Form("%s.nBinsY",ch.c_str()));
@@ -891,18 +918,25 @@ int main(int argc, char** argv)
       p_time_distRTCorr_vs_amp[ch] -> Fill( av.amp,CTR_distRTCorr );
       p_time_distRTCorr_vs_dist[ch] -> Fill( av.dist,CTR_distRTCorr );
       
-      h_CTR[ch] -> Fill( CTR );
-      h_CTR_ampCorr[ch] -> Fill( CTR_ampCorr );
-      h_CTR_RTCorr[ch] -> Fill( CTR_RTCorr );
-      h_CTR_distAmpCorr[ch] -> Fill( CTR_distAmpCorr );
-      h_CTR_distRTCorr[ch] -> Fill( CTR_distRTCorr );
+      int binX = h_occupancyX[ch] -> Fill(tv.beamX);
+      int binY = h_occupancyY[ch] -> Fill(tv.beamY);      
+      float weight = h2_occupancyXY[ch] -> GetBinContent(binX,binY) / nSelectedEntries[ch];
       
+      h_CTR[ch] -> Fill( CTR,weight );
+      h_CTR_ampCorr[ch] -> Fill( CTR_ampCorr,weight );
+      h_CTR_RTCorr[ch] -> Fill( CTR_RTCorr,weight );
+      h_CTR_distAmpCorr[ch] -> Fill( CTR_distAmpCorr,weight );
+      h_CTR_distRTCorr[ch] -> Fill( CTR_distRTCorr,weight );
       
-      int binX = h_chessOccupancyX[ch] -> Fill(tv.beamX);
-      int binY = h_chessOccupancyY[ch] -> Fill(tv.beamY);
-      std::string label(Form("%s_%d-%d",ch.c_str(),binX-1,binY-1));
-      // map_h_CTR_ampCorr[label] -> Fill( CTR-fitFunc_corrAmp[label]->Eval(av.amp)+fitFunc_corrAmp[label]->Eval(h_amp_cut[ch]->GetMean()) );
-      map_h_CTR_ampCorr[label] -> Fill( CTR-fitFunc_corrAmp[ch]->Eval(av.amp)+fitFunc_corrAmp[ch]->Eval(h_amp_cut[ch]->GetMean()) );
+      binX = h_chessOccupancyX[ch] -> Fill(tv.beamX);
+      binY = h_chessOccupancyY[ch] -> Fill(tv.beamY);
+
+      if( binX >= 0 && binY >= 0 )
+      {
+        std::string label(Form("%s_%d-%d",ch.c_str(),binX-1,binY-1));
+        map_h_CTR_ampCorr[label] -> Fill( CTR-fitFunc_corrAmp[label]->Eval(av.amp)+fitFunc_corrAmp[label]->Eval(h_amp_cut[ch]->GetMean()) );
+        // map_h_CTR_ampCorr[label] -> Fill( CTR-fitFunc_corrAmp[ch]->Eval(av.amp)+fitFunc_corrAmp[ch]->Eval(h_amp_cut[ch]->GetMean()) );
+      }
     }
   }
   std::cout << "\n>>> end 3rd loop" << std::endl;
@@ -1037,6 +1071,9 @@ int main(int argc, char** argv)
     
     h_CTR_ampCorr_posCorr[ch] = new TH1F(Form("h_CTR_ampCorr_posCorr_%s",ch.c_str()),"",1000,CTRRanges_mean[ch]-5.*CTRRanges_sigma[ch],CTRRanges_mean[ch]+5.*CTRRanges_sigma[ch]);
     h_CTR_RTCorr_posCorr[ch]  = new TH1F(Form("h_CTR_RTCorr_posCorr_%s",ch.c_str()), "",1000,CTRRanges_mean[ch]-5.*CTRRanges_sigma[ch],CTRRanges_mean[ch]+5.*CTRRanges_sigma[ch]);
+
+    h_CTR_ampCorr_posCorr[ch] -> Sumw2();
+    h_CTR_RTCorr_posCorr[ch]  -> Sumw2();
   }
   
   for(int entry = 0; entry < nEntries; ++entry)
@@ -1065,11 +1102,19 @@ int main(int argc, char** argv)
       float CTR = av.time - av.timeRef;
       float CTR_ampCorr = CTR - fitFunc_corrAmp[ch]->Eval(av.amp) + fitFunc_corrAmp[ch]->Eval( h_amp_cut[ch]->GetMean() );
       float CTR_RTCorr = CTR - fitFunc_corrRT[ch]->Eval(av.rt) + fitFunc_corrRT[ch]->Eval( h_RT_cut[ch]->GetMean() );
-      float CTR_ampCorr_posCorr = CTR_ampCorr - p2_time_ampCorr_vs_XY[ch]->GetBinContent(p2_time_ampCorr_vs_XY[ch]->FindBin(tv.beamX,tv.beamY))
-                                              + p2_time_ampCorr_vs_XY[ch]->GetBinContent(p2_time_ampCorr_vs_XY[ch]->FindBin(0.5*(xtalXMin+xtalXMax)+2,0.5*(xtalYMin+xtalYMax)+2));
-      float CTR_RTCorr_posCorr = CTR_RTCorr - p2_time_RTCorr_vs_XY[ch]->GetBinContent(p2_time_RTCorr_vs_XY[ch]->FindBin(tv.beamX,tv.beamY))
-                                             + p2_time_RTCorr_vs_XY[ch]->GetBinContent(p2_time_RTCorr_vs_XY[ch]->FindBin(0.5*(xtalXMin+xtalXMax)+2,0.5*(xtalYMin+xtalYMax)+2));
-      
+      // float CTR_ampCorr_posCorr = CTR_ampCorr - p2_time_ampCorr_vs_XY[ch]->GetBinContent(p2_time_ampCorr_vs_XY[ch]->FindBin(tv.beamX,tv.beamY))
+      //                                         + p2_time_ampCorr_vs_XY[ch]->GetBinContent(p2_time_ampCorr_vs_XY[ch]->FindBin(0.5*(xtalXMin+xtalXMax)+2,0.5*(xtalYMin+xtalYMax)+2));
+      // float CTR_RTCorr_posCorr = CTR_RTCorr - p2_time_RTCorr_vs_XY[ch]->GetBinContent(p2_time_RTCorr_vs_XY[ch]->FindBin(tv.beamX,tv.beamY))
+      //                                        + p2_time_RTCorr_vs_XY[ch]->GetBinContent(p2_time_RTCorr_vs_XY[ch]->FindBin(0.5*(xtalXMin+xtalXMax)+2,0.5*(xtalYMin+xtalYMax)+2));
+      float CTR_ampCorr_posCorr = CTR_ampCorr - p_time_ampCorr_vs_X[ch]->GetBinContent(p_time_ampCorr_vs_X[ch]->FindBin(tv.beamX))
+                                              + p_time_ampCorr_vs_X[ch]->GetBinContent(p_time_ampCorr_vs_X[ch]->FindBin(0.5*(xtalXMin+xtalXMax)+2))
+                                              - p_time_ampCorr_vs_Y[ch]->GetBinContent(p_time_ampCorr_vs_Y[ch]->FindBin(tv.beamY))
+                                              + p_time_ampCorr_vs_Y[ch]->GetBinContent(p_time_ampCorr_vs_Y[ch]->FindBin(0.5*(xtalYMin+xtalYMax)+2));
+      float CTR_RTCorr_posCorr = CTR_RTCorr - p_time_RTCorr_vs_X[ch]->GetBinContent(p_time_RTCorr_vs_X[ch]->FindBin(tv.beamX))
+                                            + p_time_RTCorr_vs_X[ch]->GetBinContent(p_time_RTCorr_vs_X[ch]->FindBin(0.5*(xtalXMin+xtalXMax)+2))
+                                            - p_time_RTCorr_vs_Y[ch]->GetBinContent(p_time_RTCorr_vs_Y[ch]->FindBin(tv.beamY))
+                                            + p_time_RTCorr_vs_Y[ch]->GetBinContent(p_time_RTCorr_vs_Y[ch]->FindBin(0.5*(xtalYMin+xtalYMax)+2));
+        
       p_time_ampCorr_posCorr_vs_amp[ch] -> Fill( av.amp,CTR_ampCorr_posCorr );
       p_time_ampCorr_posCorr_vs_X[ch] -> Fill( tv.beamX,CTR_ampCorr_posCorr );
       p_time_ampCorr_posCorr_vs_Y[ch] -> Fill( tv.beamY,CTR_ampCorr_posCorr );
@@ -1080,8 +1125,15 @@ int main(int argc, char** argv)
       p_time_RTCorr_posCorr_vs_Y[ch] -> Fill( tv.beamY,CTR_RTCorr_posCorr );
       p2_time_RTCorr_posCorr_vs_XY[ch] -> Fill( tv.beamX,tv.beamY,CTR_RTCorr_posCorr );
       
-      h_CTR_ampCorr_posCorr[ch] -> Fill( CTR_ampCorr_posCorr );
-      h_CTR_RTCorr_posCorr[ch] -> Fill( CTR_RTCorr_posCorr );
+      int binX = h_occupancyX[ch] -> Fill(tv.beamX);
+      int binY = h_occupancyY[ch] -> Fill(tv.beamY);      
+      if( binX >= 0 && binY >= 0 )
+      {
+        float weight = h2_occupancyXY[ch] -> GetBinContent(binX,binY) / nSelectedEntries[ch];
+        
+        h_CTR_ampCorr_posCorr[ch] -> Fill( CTR_ampCorr_posCorr,weight );
+        h_CTR_RTCorr_posCorr[ch] -> Fill( CTR_RTCorr_posCorr,weight );
+      }
     }
   }
   std::cout << "\n>>> end 4th loop" << std::endl;
@@ -1204,13 +1256,14 @@ int main(int argc, char** argv)
     if( index < 0 ) continue;
     
     c = new TCanvas(Form("c_CTR_ampCorr_%s",shortLabel.c_str()),Form("c_CTR_%s",shortLabel.c_str()));
-    
-    histo = h_CTR_ampCorr[ch];
+
+    histo = h_CTR[ch];
+    histoCorr = h_CTR_ampCorr[ch];
     
     if( intrinsic < 0 )
-      ctrResults = drawCTRPlot(histo,"amp. walk corr.",rebin,false,false,-1.,Form(";#Deltat [ns]"),latexLabel12,NULL,"",NULL,"");
+      ctrResults = drawCTRPlot(histoCorr,"amp. walk corr.",rebin,false,false,-1.,Form(";#Deltat [ns]"),latexLabel12,histo,"raw",NULL,"");
     else
-      ctrResults = drawCTRPlot(histo,"amp. walk corr.",rebin,false,true,intrinsic,Form(";#Deltat [ns]"),latexLabel12,NULL,"",NULL,"");
+      ctrResults = drawCTRPlot(histoCorr,"amp. walk corr.",rebin,false,true,intrinsic,Form(";#Deltat [ns]"),latexLabel12,histo,"raw",NULL,"");
     t_CTR_ampCorr_effSigma[ch] = ctrResults.effSigma;
     t_CTR_ampCorr_gausSigma[ch] = ctrResults.gausSigma;
     t_CTR_ampCorr_gausSigmaErr[ch] = ctrResults.gausSigmaErr;

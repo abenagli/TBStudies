@@ -25,6 +25,9 @@ void InitTreeVars(TTree* tree, TreeVars& treeVars, CfgManager& opts)
   tree -> SetBranchAddress("hodo.Y",treeVars.hodoY);
   // tree -> SetBranchAddress("wire.X",wireX);
   // tree -> SetBranchAddress("wire.Y",wireY);
+
+  if( opts.OptExist("Input.tableX0") ) tree -> SetBranchAddress("tableX",&treeVars.tableX);
+  if( opts.OptExist("Input.tableY0") ) tree -> SetBranchAddress("tableY",&treeVars.tableY);
   
   std::vector<std::string> channels = opts.GetOpt<std::vector<std::string> >("Channels.channels");  
   for(auto ch : channels)
@@ -39,10 +42,10 @@ void InitTreeVars(TTree* tree, TreeVars& treeVars, CfgManager& opts)
     for(auto timeMethod: timeMethods)
       if( timeMethod != "NULL" ) tree -> SetBranchAddress(timeMethod.c_str(), &treeVars.timeMethodIds[timeMethod]);
     
-    std::string Vbias = opts.GetOpt<std::string>(Form("%s.Vbias", ch.c_str()));
+    std::string Vbias = opts.OptExist(Form("%s.Vbias", ch.c_str())) ? opts.GetOpt<std::string>(Form("%s.Vbias", ch.c_str())) : "NULL";
     if( Vbias != "NULL" ) tree -> SetBranchAddress(Vbias.c_str(), &treeVars.VbiasVals[Vbias]);
     
-    std::string NINOthr = opts.GetOpt<std::string>(Form("%s.NINOthr", ch.c_str()));
+    std::string NINOthr = opts.OptExist(Form("%s.NINOthr", ch.c_str())) ? opts.GetOpt<std::string>(Form("%s.NINOthr", ch.c_str())) : "NULL";
     if( NINOthr != "NULL" ) tree -> SetBranchAddress(NINOthr.c_str(), &treeVars.NINOthrVals[NINOthr]);
   }
 }
@@ -69,6 +72,10 @@ void ReconstructHodoPosition(TreeVars& tv, CfgManager& opts, const std::string& 
     tv.beamX = tv.hodoX[plane];
     tv.beamY = tv.hodoY[plane];
   }
+
+  if( tv.run == 12426 ) tv.tableX = 42.;
+  if( opts.OptExist("Input.tableX0") ) tv.beamX = (tv.tableX-opts.GetOpt<float>("Input.tableX0")) - tv.beamX;
+  if( opts.OptExist("Input.tableY0") ) tv.beamY = (tv.tableY-opts.GetOpt<float>("Input.tableY0")) + tv.beamY;
 }
 
 
@@ -96,6 +103,7 @@ bool AcceptEvent(AnalysisVars& av,
     
     if( tv.NINOthrVals[NINOthr] < NINOthrMin || tv.NINOthrVals[NINOthr] > NINOthrMax) return false;
   }
+
   
   if( (tv.nFibresOnX[0] < nFibresMin || tv.nFibresOnX[0] > nFibresMax) ) return false;
   if( (tv.nFibresOnX[1] < nFibresMin || tv.nFibresOnX[1] > nFibresMax) ) return false;

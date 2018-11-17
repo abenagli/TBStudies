@@ -84,7 +84,7 @@ void setTDRStyle() {
   tdrStyle->SetPadTopMargin(0.06);
   tdrStyle->SetPadBottomMargin(0.13);
   tdrStyle->SetPadLeftMargin(0.16);
-  tdrStyle->SetPadRightMargin(0.20);
+  tdrStyle->SetPadRightMargin(0.16);
 
 // For the Global title:
 
@@ -126,8 +126,8 @@ void setTDRStyle() {
   tdrStyle->SetStripDecimals(kTRUE);
   tdrStyle->SetTickLength(0.03, "XYZ");
   tdrStyle->SetNdivisions(510, "XYZ");
-  tdrStyle->SetPadTickX(1);  // To get tick marks on the opposite side of the frame
-  tdrStyle->SetPadTickY(1);
+  // tdrStyle->SetPadTickX(1);  // To get tick marks on the opposite side of the frame
+  // tdrStyle->SetPadTickY(1);
 
 // Change for log plots:
   tdrStyle->SetOptLogx(0);
@@ -150,6 +150,8 @@ void setTDRStyle() {
 
   tdrStyle->SetHatchesLineWidth(5);
   tdrStyle->SetHatchesSpacing(0.05);
-
+  
+  tdrStyle->SetPaintTextFormat("%.1f");
+  
   tdrStyle->cd();
 }
