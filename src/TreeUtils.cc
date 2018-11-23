@@ -52,6 +52,52 @@ void InitTreeVars(TTree* tree, TreeVars& treeVars, CfgManager& opts)
 
 
 
+void InitTreeVarsFNAL(TTree* tree, TreeVars& treeVars, CfgManager& opts)
+{
+  treeVars.time    = new float[468];
+  treeVars.amp_max = new float[36];
+  treeVars.nFibresOnX = new int[1];
+  treeVars.nFibresOnY = treeVars.nFibresOnX;
+  treeVars.hodoX = new float[4];
+  treeVars.hodoY = new float[4];
+
+  tree -> SetBranchStatus("*",0);
+  
+  tree -> SetBranchStatus("i_evt",1);   tree -> SetBranchAddress("i_evt",&treeVars.event);
+  
+  tree -> SetBranchStatus("gaus_mean",1);  tree -> SetBranchAddress("gaus_mean",&treeVars.time[0]);
+  tree -> SetBranchStatus("IL_10mV",1);    tree -> SetBranchAddress("IL_10mV",  &treeVars.time[36]);
+  tree -> SetBranchStatus("IL_20mV",1);    tree -> SetBranchAddress("IL_20mV",  &treeVars.time[72]);
+  tree -> SetBranchStatus("IL_30mV",1);    tree -> SetBranchAddress("IL_30mV",  &treeVars.time[108]);
+  tree -> SetBranchStatus("IL_50mV",1);    tree -> SetBranchAddress("IL_50mV",  &treeVars.time[144]);
+  tree -> SetBranchStatus("IL_70mV",1);    tree -> SetBranchAddress("IL_70mV",  &treeVars.time[180]);
+  tree -> SetBranchStatus("IL_90mV",1);    tree -> SetBranchAddress("IL_90mV",  &treeVars.time[216]);
+  tree -> SetBranchStatus("IL_100mV",1);   tree -> SetBranchAddress("IL_100mV", &treeVars.time[252]);
+  tree -> SetBranchStatus("IL_120mV",1);   tree -> SetBranchAddress("IL_120mV", &treeVars.time[288]);
+  tree -> SetBranchStatus("IL_140mV",1);   tree -> SetBranchAddress("IL_140mV", &treeVars.time[324]);
+  tree -> SetBranchStatus("IL_160mV",1);   tree -> SetBranchAddress("IL_160mV", &treeVars.time[360]);
+  tree -> SetBranchStatus("IL_180mV",1);   tree -> SetBranchAddress("IL_180mV", &treeVars.time[396]);
+  tree -> SetBranchStatus("IL_200mV",1);   tree -> SetBranchAddress("IL_200mV", &treeVars.time[432]);
+  tree -> SetBranchStatus("amp",1);        tree -> SetBranchAddress("amp",      treeVars.amp_max);
+  tree -> SetBranchStatus("ntracks",1);    tree -> SetBranchAddress("ntracks",  &treeVars.nFibresOnX[0]);
+  tree -> SetBranchStatus("x_dut",1);      tree -> SetBranchAddress("x_dut",    treeVars.hodoX);
+  tree -> SetBranchStatus("y_dut",1);      tree -> SetBranchAddress("y_dut",    treeVars.hodoY);
+  
+  if( opts.OptExist("Input.tableX0") ) tree -> SetBranchAddress("tableX",&treeVars.tableX);
+  if( opts.OptExist("Input.tableY0") ) tree -> SetBranchAddress("tableY",&treeVars.tableY);
+
+  for(int jj = 0; jj < 36; ++jj)
+  {
+    treeVars.channelIds[Form("%d",jj)] = jj;
+  }
+  for(int jj = 0; jj < 468; ++jj)
+  {
+    treeVars.timeMethodIds[Form("%d",jj)] = jj;
+  }
+}
+
+
+
 void ReconstructHodoPosition(TreeVars& tv, CfgManager& opts, const std::string& ch, const bool& tracking, const int& plane)
 {
   float hodo1X_z = opts.GetOpt<float>("Input.hodo1X_z");
@@ -106,9 +152,9 @@ bool AcceptEvent(AnalysisVars& av,
 
   
   if( (tv.nFibresOnX[0] < nFibresMin || tv.nFibresOnX[0] > nFibresMax) ) return false;
-  if( (tv.nFibresOnX[1] < nFibresMin || tv.nFibresOnX[1] > nFibresMax) ) return false;
+  // if( (tv.nFibresOnX[1] < nFibresMin || tv.nFibresOnX[1] > nFibresMax) ) return false;
   if( (tv.nFibresOnY[0] < nFibresMin || tv.nFibresOnY[0] > nFibresMax) ) return false;
-  if( (tv.nFibresOnY[1] < nFibresMin || tv.nFibresOnY[1] > nFibresMax) ) return false;
+  // if( (tv.nFibresOnY[1] < nFibresMin || tv.nFibresOnY[1] > nFibresMax) ) return false;
   
   float xtalXMin = opts.GetOpt<float>(Form("%s.xtalXMin",ch.c_str()));
   float xtalXMax = opts.GetOpt<float>(Form("%s.xtalXMax",ch.c_str()));
@@ -133,7 +179,7 @@ bool AcceptEvent(AnalysisVars& av,
   float rtMax = opts.GetOpt<float>(Form("%s.rtMax",ch.c_str()));
   
   if( ampCh == "NULL" ) return false;
-  float amp = tv.amp_max[tv.channelIds[ampCh]] / 4096.;
+  float amp = tv.amp_max[tv.channelIds[ampCh]] / 1000.;
   if( amp < ampMin || amp >= ampMax ) return false;
   if( isnan(amp) ) return false;
   
@@ -165,7 +211,7 @@ bool AcceptEvent(AnalysisVars& av,
   float rtMinRef = opts.GetOpt<float>(Form("%s.rtMin",refCh.c_str()));
   float rtMaxRef = opts.GetOpt<float>(Form("%s.rtMax",refCh.c_str()));
     
-  float ampRef = tv.amp_max[tv.channelIds[ampChRef]] / 4096.;
+  float ampRef = tv.amp_max[tv.channelIds[ampChRef]] / 1000.;
   if( ampRef < ampMinRef || ampRef >= ampMaxRef ) return false;
   if( isnan(ampRef) ) return false;
   

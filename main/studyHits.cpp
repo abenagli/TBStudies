@@ -343,7 +343,7 @@ int main(int argc, char** argv)
     
     for(int jj = 0; jj < 200; ++jj)
     {
-      float cut = pow(10.,-1.+3./200.*jj);
+      float cut = pow(10.,-2.+3./200.*jj);
       
       for(auto mapIt : energy_perSimHit)
       {
@@ -442,7 +442,7 @@ int main(int argc, char** argv)
     //--- fill all recHits plots
     for(int jj = 0; jj < 200; ++jj)
     {
-      float cut = pow(10.,-1.+3./200.*jj);
+      float cut = pow(10.,-2.+3./200.*jj);
       
       for(unsigned int recHitIt = 0; recHitIt < recHits_energy->size(); ++recHitIt)
       {
@@ -672,7 +672,7 @@ int main(int argc, char** argv)
     
     for(int jj = 0; jj < 200; ++jj)
     {
-      float cut = pow(10.,-1.+3./200.*jj);
+      float cut = pow(10.,-2.+3./200.*jj);
       
       g_simHits_n_vs_energyCut -> SetPoint(jj,cut,1.*simHits_n_vs_energyCut[cut][iRU]/nEntries);
       g_simHits_PU200_n_vs_energyCut -> SetPoint(jj,cut,200.*simHits_n_vs_energyCut[cut][iRU]/nEntries);

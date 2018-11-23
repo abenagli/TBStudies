@@ -48,6 +48,9 @@ struct AnalysisVars
 /*** initialize tree variables ***/
 void InitTreeVars(TTree* tree, TreeVars& treeVars, CfgManager& opts);
 
+/*** initialize tree variables ***/
+void InitTreeVarsFNAL(TTree* tree, TreeVars& treeVars, CfgManager& opts);
+
 /*** reconstruct beam position ***/
 void ReconstructHodoPosition(TreeVars& tv, CfgManager& opts, const std::string& ch, const bool& tracking, const int& plane);
 

@@ -151,7 +151,7 @@ int main(int argc, char** argv)
   gPad -> SetGridx();
   gPad -> SetGridy();
   
-  hPad = (TH1F*)( gPad->DrawFrame(0.1,0.001,10.,0.1) );
+  hPad = (TH1F*)( gPad->DrawFrame(0.01,0.001,10.,0.30) );
   hPad -> SetTitle(";energy threshold [MeV];PU200 occupancy");
   hPad -> Draw();
   
@@ -189,7 +189,7 @@ int main(int argc, char** argv)
   gPad -> SetGridx();
   gPad -> SetGridy();
   
-  hPad = (TH1F*)( gPad->DrawFrame(0.1,0.001,10.,0.1) );
+  hPad = (TH1F*)( gPad->DrawFrame(0.01,0.001,10.,0.30) );
   hPad -> SetTitle(";energy threshold [MeV];PU200 occupancy");
   hPad -> Draw();
   

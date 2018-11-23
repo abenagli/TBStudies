@@ -60,12 +60,13 @@ int main(int argc, char** argv)
   int runMin = opts.GetOpt<int>("Input.runMin");
   int runMax = opts.GetOpt<int>("Input.runMax");
   int maxEntries = opts.GetOpt<int>("Input.maxEntries");
+  std::string treeName = opts.GetOpt<std::string>("Input.treeName");
   
-  TChain* h4 = new TChain("h4","h4");
+  TChain* h4 = new TChain(treeName.c_str(),treeName.c_str());
   for(int run = runMin; run <= runMax; ++run)
   {
     // std::string fileName = Form("%s/%d/*.root",inputDir.c_str(),run);
-    std::string fileName = Form("%s/%d.root",inputDir.c_str(),run);
+    std::string fileName = Form("%s/*%d*.root",inputDir.c_str(),run);
     std::cout << ">>> Adding flle " << fileName << std::endl;
     h4 -> Add(fileName.c_str());
   }
@@ -90,7 +91,8 @@ int main(int argc, char** argv)
   
   //--- define tree branch addresses
   TreeVars tv;
-  InitTreeVars(h4,tv,opts);
+  //InitTreeVars(h4,tv,opts);
+  InitTreeVarsFNAL(h4,tv,opts);
   
   int nEntries = h4->GetEntries();
   std::cout << ">>> Events read: " << nEntries << std::endl;
@@ -249,9 +251,9 @@ int main(int argc, char** argv)
     float xtalYMin = opts.GetOpt<float>(Form("%s.xtalYMin",ch.c_str())); 
     float xtalYMax = opts.GetOpt<float>(Form("%s.xtalYMax",ch.c_str()));
     
-    p_eff_vs_X[ch] = new TProfile(Form("p_eff_vs_X_%s",ch.c_str()),"",80,-20.,20.);
-    p_eff_vs_Y[ch] = new TProfile(Form("p_eff_vs_Y_%s",ch.c_str()),"",80,-20.,20.);
-    p2_eff_vs_XY[ch] = new TProfile2D(Form("p2_eff_vs_XY_%s",ch.c_str()),"",80,-20.,20.,80,-20.,20.);
+    p_eff_vs_X[ch] = new TProfile(Form("p_eff_vs_X_%s",ch.c_str()),"",60,0.,30.);
+    p_eff_vs_Y[ch] = new TProfile(Form("p_eff_vs_Y_%s",ch.c_str()),"",60,10.,40.);
+    p2_eff_vs_XY[ch] = new TProfile2D(Form("p2_eff_vs_XY_%s",ch.c_str()),"",60,0.,30.,60,10.,40.);
     
     h_amp[ch]     = new TH1F(Form("h_amp_%s",    ch.c_str()),"",4000,0.,1.);
     h_amp_cut[ch] = new TH1F(Form("h_amp_cut_%s",ch.c_str()),"",4000,0.,1.);
@@ -367,13 +369,14 @@ int main(int argc, char** argv)
     if( entry%1000 == 0 ) std::cout << ">>> 1st loop: reading entry " << entry << " / " << nEntries << "\r" << std::flush;
     h4 -> GetEntry(entry);
     // if( !goodSpills[std::make_pair(tv.run,tv.spill)] ) continue;
-
+    
     
     for(auto ch: channels)
     {
       // reconstruct position
       ReconstructHodoPosition(tv,opts,ch,bool(doTracking),hodoPlane);
-
+      
+      
       if( doTracking )
       {
         if( (tv.nFibresOnX[0] < nFibresMin || tv.nFibresOnX[0] > nFibresMax) ) continue;
@@ -389,6 +392,7 @@ int main(int argc, char** argv)
         // if( fabs((tv.hodoY[1]-tv.hodoY[0]-0.12)) > 2. ) continue;
       }
       
+      
       // fill amplitude and time plots
       int index = opts.GetOpt<int>(Form("%s.index", ch.c_str()));
       std::string ampCh  = opts.GetOpt<std::string>(Form("%s.ampCh", ch.c_str()));
@@ -397,7 +401,7 @@ int main(int argc, char** argv)
       std::vector<std::string> timeMethods = opts.GetOpt<std::vector<std::string> >(Form("%s.timeMethods",ch.c_str()));
       
       if( ampCh == "NULL" ) continue;
-      float amp = tv.amp_max[tv.channelIds[ampCh]] / 4096.;
+      float amp = tv.amp_max[tv.channelIds[ampCh]] / 1000.;
       h_amp[ch] -> Fill( amp );
       
       float ampMin = opts.GetOpt<float>(Form("%s.ampMin",ch.c_str())); 
@@ -461,7 +465,7 @@ int main(int argc, char** argv)
       float timeMinRef = opts.GetOpt<float>(Form("%s.timeMin",refCh.c_str())); 
       float timeMaxRef = opts.GetOpt<float>(Form("%s.timeMax",refCh.c_str()));
       
-      float ampRef = tv.amp_max[tv.channelIds[ampChRef]] / 4096.;
+      float ampRef = tv.amp_max[tv.channelIds[ampChRef]] / 1000.;
       float timTrgRef = trgChRef != "NULL" ? tv.time[tv.channelIds[trgChRef]+tv.timeMethodIds["LED"]] : 0;
       float timRef = tv.time[tv.channelIds[timeChRef]+tv.timeMethodIds[timeMethodsRef.at(0)]];
       
@@ -563,9 +567,9 @@ int main(int argc, char** argv)
 
     c = new TCanvas("c","c",2000,600);
     c -> Divide(3,1);
-    c->cd(1); DrawProfile  (opts,ch,p_eff_vs_X[ch],  ";hodoscope x [mm];efficiency",                 -30.,30.,0.001,1.1,kBlack,"",latexLabels[ch]);
-    c->cd(2); DrawProfile  (opts,ch,p_eff_vs_Y[ch],  ";hodoscope y [mm];efficiency",                 -30.,30.,0.001,1.1,kBlack,"",latexLabels[ch]);
-    c->cd(3); DrawProfile2D(opts,ch,p2_eff_vs_XY[ch],";hodoscope x [mm];hodoscope y [mm];efficiency",-30.,30.,-30.,30.,0.001,1.1,latexLabels[ch],&lines_xtal);
+    c->cd(1); DrawProfile  (opts,ch,p_eff_vs_X[ch],  ";hodoscope x [mm];efficiency",                 0.,30.,0.001,1.1,kBlack,"",latexLabels[ch]);
+    c->cd(2); DrawProfile  (opts,ch,p_eff_vs_Y[ch],  ";hodoscope y [mm];efficiency",                 0.,30.,0.001,1.1,kBlack,"",latexLabels[ch]);
+    c->cd(3); DrawProfile2D(opts,ch,p2_eff_vs_XY[ch],";hodoscope x [mm];hodoscope y [mm];efficiency",0.,30.,10.,40.,0.001,1.1,latexLabels[ch],&lines_xtal);
     PrintCanvas(c,opts,ch,plotDir,"1_eff_vs_XY"); delete c;
 
     c = new TCanvas("c","c",2000,600);
