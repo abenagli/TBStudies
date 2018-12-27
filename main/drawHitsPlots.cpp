@@ -44,7 +44,8 @@ int main(int argc, char** argv)
   int debugMode = 0;
   if( argc > 2 ) debugMode = atoi(argv[2]);
 
-
+  int nRUs = opts.GetOpt<int>("Input.nRUs");
+  
   float PDE = opts.GetOpt<float>("Options.PDE");
   float DCR = opts.GetOpt<float>("Options.DCR");
   
@@ -66,6 +67,8 @@ int main(int argc, char** argv)
     latexLabel = new TLatex(0.16,0.96,Form("3#times50 mm^{2} bars along #phi -- %s",particleLabel2.c_str()));
   if( label == "barz" )
     latexLabel = new TLatex(0.16,0.96,Form("3#times50 mm^{2} bars along z -- %s",particleLabel2.c_str()));
+  if( label == "barzflat" )
+    latexLabel = new TLatex(0.16,0.96,Form("3#times56 mm^{2} flat bars along z -- %s",particleLabel2.c_str()));
   latexLabel -> SetNDC();
   latexLabel -> SetTextFont(42);
   latexLabel -> SetTextSize(0.03);
@@ -165,7 +168,7 @@ int main(int argc, char** argv)
   legend -> SetFillStyle(1000);  
   legend -> SetTextFont(82);
   
-  for(int iRU = 0; iRU < 9; ++iRU)
+  for(int iRU = 0; iRU < nRUs; ++iRU)
   {
     g = (TGraph*)( inFile->Get(Form("g_simHits_PU200_occ_vs_energyCut_RU%d",iRU)) );
     g -> SetLineColor(colors[iRU]);
@@ -203,7 +206,7 @@ int main(int argc, char** argv)
   legend -> SetFillStyle(1000);  
   legend -> SetTextFont(82);
   
-  for(int iRU = 0; iRU < 9; ++iRU)
+  for(int iRU = 0; iRU < nRUs; ++iRU)
   {
     g = (TGraph*)( inFile->Get(Form("g_recHits_PU200_occ_vs_energyCut_RU%d",iRU)) );
     g -> SetLineColor(colors[iRU]);
@@ -344,20 +347,20 @@ int main(int argc, char** argv)
   legend -> SetTextFont(82);
   legend -> SetTextSize(0.02);
   
-  latexLabel2 = new TLatex(0.18,0.20,Form("#splitline{E_{thr} = %.1f MeV}{p_{T} #in [0.8,10.0] GeV }",1.));
+  latexLabel2 = new TLatex(0.18,0.20,Form("#splitline{E_{thr} = %.1f MeV}{p_{T} #in [0.8,%.1f] GeV }",1.,ptRanges.at(ptRanges.size()-1)));
   latexLabel2 -> SetNDC();
   latexLabel2 -> SetTextFont(82);
   latexLabel2 -> SetTextSize(0.02);
   latexLabel2 -> Draw("same");
-  
-  p = (TProfile*)( inFile->Get(Form("p1_matchedRecHit_totEnergy_vs_eta__pt00.8-10.0__Ethr%.1fMeV",1.)) );
+
+  p = (TProfile*)( inFile->Get(Form("p1_matchedRecHit_totEnergy_vs_eta__pt00.8-%04.1f__Ethr%.1fMeV",ptRanges.at(ptRanges.size()-1),1.)) );
   p -> SetMarkerSize(1.0);
   p -> SetMarkerColor(kBlack);
   p -> SetLineColor(kBlack);
   p -> Draw("same");
   legend -> AddEntry(p,Form("total energy"),"PL");
   
-  p = (TProfile*)( inFile->Get(Form("p1_matchedRecHit_maxEnergy_vs_eta__pt00.8-10.0__Ethr%.1fMeV",1.)) );
+  p = (TProfile*)( inFile->Get(Form("p1_matchedRecHit_maxEnergy_vs_eta__pt00.8-%04.1f__Ethr%.1fMeV",ptRanges.at(ptRanges.size()-1),1.)) );
   p -> SetMarkerSize(1.0);
   p -> SetMarkerStyle(24);
   p -> SetMarkerColor(kBlack);
@@ -368,7 +371,7 @@ int main(int argc, char** argv)
   float rightmax = 1.;
   float scale = gPad->GetUymax()/rightmax;
   
-  p = (TProfile*)( inFile->Get(Form("p1_matchedRecHit_maxOverTotEnergy_vs_eta__pt00.8-10.0__Ethr%.1fMeV",1.)) );
+  p = (TProfile*)( inFile->Get(Form("p1_matchedRecHit_maxOverTotEnergy_vs_eta__pt00.8-%04.1f__Ethr%.1fMeV",ptRanges.at(ptRanges.size()-1),1.)) );
   p -> SetLineColor(kBlack);
   p -> SetLineWidth(2);
   p->SetLineColor(kRed);
@@ -419,7 +422,7 @@ int main(int argc, char** argv)
     latexLabel2 -> SetTextFont(82);
     latexLabel2 -> SetTextSize(0.02);
     latexLabel2 -> Draw("same");
-    
+
     p = (TProfile*)( inFile->Get(Form("p1_matchedRecHit_totEnergy_vs_eta__pt%04.1f-%04.1f__Ethr%.1fMeV",ptMin,ptMax,1.)) );
     p -> SetMarkerSize(1.0);
     p -> SetMarkerColor(kBlack);
@@ -478,40 +481,40 @@ int main(int argc, char** argv)
   hPad -> SetTitle(";|#eta|;#sigma_{t} [ps]");
   hPad -> Draw();
   
-  legend = new TLegend(0.50,0.16,0.83,0.16+3*0.04);
+  legend = new TLegend(0.50,0.87-2*0.05,0.83,0.87);
   legend -> SetFillColor(0);
   legend -> SetFillStyle(1000);
   legend -> SetTextFont(82);
-  legend -> SetTextSize(0.02);
+  legend -> SetTextSize(0.04);
   
-  latexLabel2 = new TLatex(0.18,0.20,Form("#splitline{E_{thr} = %.1f MeV}{#splitline{p_{T} #in [0.8,10.0] GeV}{PDE = %.0f%%, DCR = %.0fGHz}}",1.,100.*PDE,DCR));
+  latexLabel2 = new TLatex(0.17,0.21,Form("#splitline{E_{thr} = %.1f MeV}{#splitline{p_{T} #in [0.8,%.1f] GeV}{PDE = %.0f%%, DCR = %.0fGHz}}",1.,ptRanges.at(ptRanges.size()-1),100.*PDE,DCR));
   latexLabel2 -> SetNDC();
   latexLabel2 -> SetTextFont(82);
-  latexLabel2 -> SetTextSize(0.02);
+  latexLabel2 -> SetTextSize(0.04);
   latexLabel2 -> Draw("same");
   
-  p = (TProfile*)( inFile->Get(Form("p1_matchedRecHit_timeRes_vs_eta__totEnergy__pt%04.1f-%04.1f__Ethr%.1fMeV",0.8,10.,1.)) );
-  p -> SetMarkerSize(1.0);
-  p -> SetMarkerColor(kBlack);
-  p -> SetLineColor(kBlack);
+  p = (TProfile*)( inFile->Get(Form("p1_matchedRecHit_timeRes_vs_eta__totEnergy__pt%04.1f-%04.1f__Ethr%.1fMeV",0.8,ptRanges.at(ptRanges.size()-1),1.)) );
+  p -> SetMarkerSize(1.5);
+  p -> SetMarkerColor(kRed);
+  p -> SetLineColor(kRed);
   p -> Draw("same");
-  legend -> AddEntry(p,Form("total energy"),"PL");
+  legend -> AddEntry(p,Form("single crystal"),"PL");
   
-  p = (TProfile*)( inFile->Get(Form("p1_matchedRecHit_timeRes_vs_eta__maxEnergy__pt%04.1f-%04.1f__Ethr%.1fMeV",0.8,10.,1.)) );
-  p -> SetMarkerSize(1.0);
-  p -> SetMarkerStyle(24);
-  p -> SetMarkerColor(kBlack);
-  p -> SetLineColor(kBlack);
-  p -> Draw("same");
-  legend -> AddEntry(p,Form("max. recHit energy"),"PL");
+  // p = (TProfile*)( inFile->Get(Form("p1_matchedRecHit_timeRes_vs_eta__maxEnergy__pt%04.1f-%04.1f__Ethr%.1fMeV",0.8,ptRanges.at(ptRanges.size()-1),,1.)) );
+  // p -> SetMarkerSize(1.0);
+  // p -> SetMarkerStyle(24);
+  // p -> SetMarkerColor(kBlack);
+  // p -> SetLineColor(kBlack);
+  // p -> Draw("same");
+  // legend -> AddEntry(p,Form("max. recHit energy"),"PL");
   
-  p = (TProfile*)( inFile->Get(Form("p1_matchedRecHit_timeRes_vs_eta__sumEnergy__pt%04.1f-%04.1f__Ethr%.1fMeV",0.8,10.,1.)) );
-  p -> SetMarkerSize(1.0);
+  p = (TProfile*)( inFile->Get(Form("p1_matchedRecHit_timeRes_vs_eta__sumEnergy__pt%04.1f-%04.1f__Ethr%.1fMeV",0.8,ptRanges.at(ptRanges.size()-1),1.)) );
+  p -> SetMarkerSize(1.5);
   p -> SetMarkerStyle(22);
-  p -> SetMarkerColor(kBlack);
-  p -> SetLineColor(kBlack);
+  p -> SetMarkerColor(kBlue);
+  p -> SetLineColor(kBlue);
   p -> Draw("same");
-  legend -> AddEntry(p,Form("sum of recHit energy"),"PL");
+  legend -> AddEntry(p,Form("sum of recHits"),"PL");
   
   legend -> Draw("same");
   latexLabel -> Draw("same");
@@ -534,40 +537,40 @@ int main(int argc, char** argv)
     hPad -> SetTitle(";|#eta|;#sigma_{t} [ps]");
     hPad -> Draw();
     
-    legend = new TLegend(0.50,0.16,0.83,0.16+3*0.04);
+    legend = new TLegend(0.50,0.87-2*0.05,0.83,0.87);
     legend -> SetFillColor(0);
     legend -> SetFillStyle(1000);
     legend -> SetTextFont(82);
-    legend -> SetTextSize(0.02);
+    legend -> SetTextSize(0.04);
     
-    latexLabel2 = new TLatex(0.18,0.20,Form("#splitline{E_{thr} = %.1f MeV}{#splitline{p_{T} #in [%.1f,%.1f] GeV}{PDE = %.0f%%, DCR = %.0fGHz}}",1.,ptMin,ptMax,100.*PDE,DCR));
+    latexLabel2 = new TLatex(0.17,0.21,Form("#splitline{E_{thr} = %.1f MeV}{#splitline{p_{T} #in [%.1f,%.1f] GeV}{PDE = %.0f%%, DCR = %.0fGHz}}",1.,ptMin,ptMax,100.*PDE,DCR));
     latexLabel2 -> SetNDC();
     latexLabel2 -> SetTextFont(82);
-    latexLabel2 -> SetTextSize(0.02);
+    latexLabel2 -> SetTextSize(0.04);
     latexLabel2 -> Draw("same");
     
     p = (TProfile*)( inFile->Get(Form("p1_matchedRecHit_timeRes_vs_eta__totEnergy__pt%04.1f-%04.1f__Ethr%.1fMeV",ptMin,ptMax,1.)) );
-    p -> SetMarkerSize(1.0);
-    p -> SetMarkerColor(kBlack);
-    p -> SetLineColor(kBlack);
+    p -> SetMarkerSize(1.5);
+    p -> SetMarkerColor(kRed);
+    p -> SetLineColor(kRed);
     p -> Draw("same");
-    legend -> AddEntry(p,Form("total energy"),"PL");
+    legend -> AddEntry(p,Form("single crystal"),"PL");
     
-    p = (TProfile*)( inFile->Get(Form("p1_matchedRecHit_timeRes_vs_eta__maxEnergy__pt%04.1f-%04.1f__Ethr%.1fMeV",ptMin,ptMax,1.)) );
-    p -> SetMarkerSize(1.0);
-    p -> SetMarkerStyle(24);
-    p -> SetMarkerColor(kBlack);
-    p -> SetLineColor(kBlack);
-    p -> Draw("same");
-    legend -> AddEntry(p,Form("max. recHit energy"),"PL");
+    // p = (TProfile*)( inFile->Get(Form("p1_matchedRecHit_timeRes_vs_eta__maxEnergy__pt%04.1f-%04.1f__Ethr%.1fMeV",ptMin,ptMax,1.)) );
+    // p -> SetMarkerSize(1.0);
+    // p -> SetMarkerStyle(24);
+    // p -> SetMarkerColor(kBlack);
+    // p -> SetLineColor(kBlack);
+    // p -> Draw("same");
+    // legend -> AddEntry(p,Form("max. recHit energy"),"PL");
     
     p = (TProfile*)( inFile->Get(Form("p1_matchedRecHit_timeRes_vs_eta__sumEnergy__pt%04.1f-%04.1f__Ethr%.1fMeV",ptMin,ptMax,1.)) );
-    p -> SetMarkerSize(1.0);
+    p -> SetMarkerSize(1.5);
     p -> SetMarkerStyle(22);
-    p -> SetMarkerColor(kBlack);
-    p -> SetLineColor(kBlack);
+    p -> SetMarkerColor(kBlue);
+    p -> SetLineColor(kBlue);
     p -> Draw("same");
-    legend -> AddEntry(p,Form("sum of recHit energy"),"PL");
+    legend -> AddEntry(p,Form("sum of recHits"),"PL");
     
     legend -> Draw("same");
     latexLabel -> Draw("same");
@@ -582,149 +585,151 @@ int main(int argc, char** argv)
   
   
   
-  for(unsigned int jj = 0; jj < ptRanges.size()-1; ++jj)
-  {
-    float ptMin = ptRanges.at(jj);
-    float ptMax = ptRanges.at(jj+1);
+  // for(unsigned int jj = 0; jj < ptRanges.size()-1; ++jj)
+  // {
+  //   float ptMin = ptRanges.at(jj);
+  //   float ptMax = ptRanges.at(jj+1);
     
-    c = new TCanvas(Form("c_maxEnergy_vs_local_x__pt%04.1f-%04.1f",ptMin,ptMax),Form("c_maxEnergy_vs_local_x__pt%04.1f-%04.1f",ptMin,ptMax),1400,1200);
-    gPad -> SetGridx();
-    gPad -> SetGridy();
+  //   c = new TCanvas(Form("c_maxEnergy_vs_local_x__pt%04.1f-%04.1f",ptMin,ptMax),Form("c_maxEnergy_vs_local_x__pt%04.1f-%04.1f",ptMin,ptMax),1400,1200);
+  //   gPad -> SetGridx();
+  //   gPad -> SetGridy();
 
-    if( label == "tile" )   hPad = (TH1F*)( gPad->DrawFrame(-1., 0.,1., 12.) );
-    if( label == "barphi" ) hPad = (TH1F*)( gPad->DrawFrame(-5., 0.,5., 12.) );
-    if( label == "barz" )   hPad = (TH1F*)( gPad->DrawFrame(-0.2,0.,0.2,12.) );
-    hPad -> SetTitle(";local x (#phi direction) [cm];#Sigma E_{simHit} [MeV]");
-    hPad -> Draw();
+  //   if( label == "tile" )     hPad = (TH1F*)( gPad->DrawFrame(-1., 0.,1., 12.) );
+  //   if( label == "barphi" )   hPad = (TH1F*)( gPad->DrawFrame(-5., 0.,5., 12.) );
+  //   if( label == "barz" )     hPad = (TH1F*)( gPad->DrawFrame(-0.2,0.,0.2,12.) );
+  //   if( label == "barzflat" ) hPad = (TH1F*)( gPad->DrawFrame(-0.2,0.,0.2,12.) );
+  //   hPad -> SetTitle(";local x (#phi direction) [cm];#Sigma E_{simHit} [MeV]");
+  //   hPad -> Draw();
     
-    legend = new TLegend(0.50,0.16,0.83,0.16+2*0.04);
-    legend -> SetFillColor(0);
-    legend -> SetFillStyle(1000);  
-    legend -> SetTextFont(82);
-    legend -> SetTextSize(0.02);
+  //   legend = new TLegend(0.50,0.16,0.83,0.16+2*0.04);
+  //   legend -> SetFillColor(0);
+  //   legend -> SetFillStyle(1000);  
+  //   legend -> SetTextFont(82);
+  //   legend -> SetTextSize(0.02);
     
-    latexLabel2 = new TLatex(0.18,0.20,Form("#splitline{E_{thr} = %.1f MeV}{p_{T} #in [%.1f,%.1f] GeV }",1.,ptMin,ptMax));
-    latexLabel2 -> SetNDC();
-    latexLabel2 -> SetTextFont(82);
-    latexLabel2 -> SetTextSize(0.02);
-    latexLabel2 -> Draw("same");
+  //   latexLabel2 = new TLatex(0.18,0.20,Form("#splitline{E_{thr} = %.1f MeV}{p_{T} #in [%.1f,%.1f] GeV }",1.,ptMin,ptMax));
+  //   latexLabel2 -> SetNDC();
+  //   latexLabel2 -> SetTextFont(82);
+  //   latexLabel2 -> SetTextSize(0.02);
+  //   latexLabel2 -> Draw("same");
     
-    p = (TProfile*)( inFile->Get(Form("p1_matchedSimHit_totEnergy_vs_local_x__pt%04.1f-%04.1f__Ethr%.1fMeV",ptMin,ptMax,1.)) );
-    p -> SetMarkerSize(1.0);
-    p -> SetMarkerColor(kBlack);
-    p -> SetLineColor(kBlack);
-    p -> Draw("same");
-    legend -> AddEntry(p,Form("total energy"),"PL");
+  //   p = (TProfile*)( inFile->Get(Form("p1_matchedSimHit_totEnergy_vs_local_x__pt%04.1f-%04.1f__Ethr%.1fMeV",ptMin,ptMax,1.)) );
+  //   p -> SetMarkerSize(1.0);
+  //   p -> SetMarkerColor(kBlack);
+  //   p -> SetLineColor(kBlack);
+  //   p -> Draw("same");
+  //   legend -> AddEntry(p,Form("total energy"),"PL");
     
-    p = (TProfile*)( inFile->Get(Form("p1_matchedSimHit_maxEnergy_vs_local_x__pt%04.1f-%04.1f__Ethr%.1fMeV",ptMin,ptMax,1.)) );
-    p -> SetMarkerSize(1.0);
-    p -> SetMarkerStyle(24);
-    p -> SetMarkerColor(kBlack);
-    p -> SetLineColor(kBlack);
-    p -> Draw("same");
-    legend -> AddEntry(p,Form("max. simHit energy"),"PL");
+  //   p = (TProfile*)( inFile->Get(Form("p1_matchedSimHit_maxEnergy_vs_local_x__pt%04.1f-%04.1f__Ethr%.1fMeV",ptMin,ptMax,1.)) );
+  //   p -> SetMarkerSize(1.0);
+  //   p -> SetMarkerStyle(24);
+  //   p -> SetMarkerColor(kBlack);
+  //   p -> SetLineColor(kBlack);
+  //   p -> Draw("same");
+  //   legend -> AddEntry(p,Form("max. simHit energy"),"PL");
     
-    float rightmax = 1.;
-    float scale = gPad->GetUymax()/rightmax;
+  //   float rightmax = 1.;
+  //   float scale = gPad->GetUymax()/rightmax;
     
-    p = (TProfile*)( inFile->Get(Form("p1_matchedSimHit_maxOverTotEnergy_vs_local_x__pt%04.1f-%04.1f__Ethr%.1fMeV",ptMin,ptMax,1.)) );
-    p -> SetLineColor(kBlack);
-    p -> SetLineWidth(2);
-    p->SetLineColor(kRed);
-    p->Scale(scale);
-    p->Draw("hist,same");
+  //   p = (TProfile*)( inFile->Get(Form("p1_matchedSimHit_maxOverTotEnergy_vs_local_x__pt%04.1f-%04.1f__Ethr%.1fMeV",ptMin,ptMax,1.)) );
+  //   p -> SetLineColor(kBlack);
+  //   p -> SetLineWidth(2);
+  //   p->SetLineColor(kRed);
+  //   p->Scale(scale);
+  //   p->Draw("hist,same");
     
-    //draw an axis on the right side
-    TGaxis* axis = new TGaxis(gPad->GetUxmax(),gPad->GetUymin(),gPad->GetUxmax(),gPad->GetUymax(),0,rightmax,510,"+L");
-    axis->SetLineColor(kRed);
-    axis->SetLabelColor(kRed);
-    axis->SetLabelFont(42);
-    axis->SetLabelSize(0.04);
-    axis->SetTitleFont(42);
-    axis->SetTitleSize(0.06);
-    axis->SetTitleColor(kRed);
-    axis->SetTitle("E_{simHit}^{max} / #Sigma E_{simHit}");
-    axis->Draw();
+  //   //draw an axis on the right side
+  //   TGaxis* axis = new TGaxis(gPad->GetUxmax(),gPad->GetUymin(),gPad->GetUxmax(),gPad->GetUymax(),0,rightmax,510,"+L");
+  //   axis->SetLineColor(kRed);
+  //   axis->SetLabelColor(kRed);
+  //   axis->SetLabelFont(42);
+  //   axis->SetLabelSize(0.04);
+  //   axis->SetTitleFont(42);
+  //   axis->SetTitleSize(0.06);
+  //   axis->SetTitleColor(kRed);
+  //   axis->SetTitle("E_{simHit}^{max} / #Sigma E_{simHit}");
+  //   axis->Draw();
     
-    legend -> Draw("same");
-    latexLabel -> Draw("same");
+  //   legend -> Draw("same");
+  //   latexLabel -> Draw("same");
     
-    c -> Print(Form("%s/c_%s_maxEnergy_vs_local_x__pt%04.1f-%04.1f.png",plotDir.c_str(),label.c_str(),ptMin,ptMax));
-    c -> Print(Form("%s/c_%s_maxEnergy_vs_local_x__pt%04.1f-%04.1f.pdf",plotDir.c_str(),label.c_str(),ptMin,ptMax));
-    delete c;    
-  }
+  //   c -> Print(Form("%s/c_%s_maxEnergy_vs_local_x__pt%04.1f-%04.1f.png",plotDir.c_str(),label.c_str(),ptMin,ptMax));
+  //   c -> Print(Form("%s/c_%s_maxEnergy_vs_local_x__pt%04.1f-%04.1f.pdf",plotDir.c_str(),label.c_str(),ptMin,ptMax));
+  //   delete c;    
+  // }
   
-  for(unsigned int jj = 0; jj < ptRanges.size()-1; ++jj)
-  {
-    float ptMin = ptRanges.at(jj);
-    float ptMax = ptRanges.at(jj+1);
+  // for(unsigned int jj = 0; jj < ptRanges.size()-1; ++jj)
+  // {
+  //   float ptMin = ptRanges.at(jj);
+  //   float ptMax = ptRanges.at(jj+1);
     
-    c = new TCanvas(Form("c_maxEnergy_vs_local_y__pt%04.1f-%04.1f",ptMin,ptMax),Form("c_maxEnergy_vs_local_y__pt%04.1f-%04.1f",ptMin,ptMax),1400,1200);
-    gPad -> SetGridx();
-    gPad -> SetGridy();
+  //   c = new TCanvas(Form("c_maxEnergy_vs_local_y__pt%04.1f-%04.1f",ptMin,ptMax),Form("c_maxEnergy_vs_local_y__pt%04.1f-%04.1f",ptMin,ptMax),1400,1200);
+  //   gPad -> SetGridx();
+  //   gPad -> SetGridy();
 
-    if( label == "tile" )  hPad = (TH1F*)( gPad->DrawFrame(-1., 0.,1., 12.) );
-    if( label == "barphi") hPad = (TH1F*)( gPad->DrawFrame(-0.2,0.,0.2,12.) );
-    if( label == "barz" )  hPad = (TH1F*)( gPad->DrawFrame(-5., 0.,5., 12.) );
-    hPad -> SetTitle(";local y (#eta direction) [cm];#Sigma E_{simHit} [MeV]");
-    hPad -> Draw();
+  //   if( label == "tile" )  hPad = (TH1F*)( gPad->DrawFrame(-1., 0.,1., 12.) );
+  //   if( label == "barphi") hPad = (TH1F*)( gPad->DrawFrame(-0.2,0.,0.2,12.) );
+  //   if( label == "barz" )  hPad = (TH1F*)( gPad->DrawFrame(-5., 0.,5., 12.) );
+  //   if( label == "barzflat" )  hPad = (TH1F*)( gPad->DrawFrame(-5., 0.,5., 12.) );
+  //   hPad -> SetTitle(";local y (#eta direction) [cm];#Sigma E_{simHit} [MeV]");
+  //   hPad -> Draw();
     
-    legend = new TLegend(0.50,0.16,0.83,0.16+2*0.04);
-    legend -> SetFillColor(0);
-    legend -> SetFillStyle(1000);  
-    legend -> SetTextFont(82);
-    legend -> SetTextSize(0.02);
+  //   legend = new TLegend(0.50,0.16,0.83,0.16+2*0.04);
+  //   legend -> SetFillColor(0);
+  //   legend -> SetFillStyle(1000);  
+  //   legend -> SetTextFont(82);
+  //   legend -> SetTextSize(0.02);
     
-    latexLabel2 = new TLatex(0.18,0.20,Form("#splitline{E_{thr} = %.1f MeV}{p_{T} #in [%.1f,%.1f] GeV }",1.,ptMin,ptMax));
-    latexLabel2 -> SetNDC();
-    latexLabel2 -> SetTextFont(82);
-    latexLabel2 -> SetTextSize(0.02);
-    latexLabel2 -> Draw("same");
+  //   latexLabel2 = new TLatex(0.18,0.20,Form("#splitline{E_{thr} = %.1f MeV}{p_{T} #in [%.1f,%.1f] GeV }",1.,ptMin,ptMax));
+  //   latexLabel2 -> SetNDC();
+  //   latexLabel2 -> SetTextFont(82);
+  //   latexLabel2 -> SetTextSize(0.02);
+  //   latexLabel2 -> Draw("same");
     
-    p = (TProfile*)( inFile->Get(Form("p1_matchedSimHit_totEnergy_vs_local_y__pt%04.1f-%04.1f__Ethr%.1fMeV",ptMin,ptMax,1.)) );
-    p -> SetMarkerSize(1.0);
-    p -> SetMarkerColor(kBlack);
-    p -> SetLineColor(kBlack);
-    p -> Draw("same");
-    legend -> AddEntry(p,Form("total energy"),"PL");
+  //   p = (TProfile*)( inFile->Get(Form("p1_matchedSimHit_totEnergy_vs_local_y__pt%04.1f-%04.1f__Ethr%.1fMeV",ptMin,ptMax,1.)) );
+  //   p -> SetMarkerSize(1.0);
+  //   p -> SetMarkerColor(kBlack);
+  //   p -> SetLineColor(kBlack);
+  //   p -> Draw("same");
+  //   legend -> AddEntry(p,Form("total energy"),"PL");
     
-    p = (TProfile*)( inFile->Get(Form("p1_matchedSimHit_maxEnergy_vs_local_y__pt%04.1f-%04.1f__Ethr%.1fMeV",ptMin,ptMax,1.)) );
-    p -> SetMarkerSize(1.0);
-    p -> SetMarkerStyle(24);
-    p -> SetMarkerColor(kBlack);
-    p -> SetLineColor(kBlack);
-    p -> Draw("same");
-    legend -> AddEntry(p,Form("max. simHit energy"),"PL");
+  //   p = (TProfile*)( inFile->Get(Form("p1_matchedSimHit_maxEnergy_vs_local_y__pt%04.1f-%04.1f__Ethr%.1fMeV",ptMin,ptMax,1.)) );
+  //   p -> SetMarkerSize(1.0);
+  //   p -> SetMarkerStyle(24);
+  //   p -> SetMarkerColor(kBlack);
+  //   p -> SetLineColor(kBlack);
+  //   p -> Draw("same");
+  //   legend -> AddEntry(p,Form("max. simHit energy"),"PL");
     
-    float rightmax = 1.;
-    float scale = gPad->GetUymax()/rightmax;
+  //   float rightmax = 1.;
+  //   float scale = gPad->GetUymax()/rightmax;
     
-    p = (TProfile*)( inFile->Get(Form("p1_matchedSimHit_maxOverTotEnergy_vs_local_y__pt%04.1f-%04.1f__Ethr%.1fMeV",ptMin,ptMax,1.)) );
-    p -> SetLineColor(kBlack);
-    p -> SetLineWidth(2);
-    p->SetLineColor(kRed);
-    p->Scale(scale);
-    p->Draw("hist,same");
+  //   p = (TProfile*)( inFile->Get(Form("p1_matchedSimHit_maxOverTotEnergy_vs_local_y__pt%04.1f-%04.1f__Ethr%.1fMeV",ptMin,ptMax,1.)) );
+  //   p -> SetLineColor(kBlack);
+  //   p -> SetLineWidth(2);
+  //   p->SetLineColor(kRed);
+  //   p->Scale(scale);
+  //   p->Draw("hist,same");
     
-    //draw an axis on the right side
-    TGaxis* axis = new TGaxis(gPad->GetUxmax(),gPad->GetUymin(),gPad->GetUxmax(),gPad->GetUymax(),0,rightmax,510,"+L");
-    axis->SetLineColor(kRed);
-    axis->SetLabelColor(kRed);
-    axis->SetLabelFont(42);
-    axis->SetLabelSize(0.04);
-    axis->SetTitleFont(42);
-    axis->SetTitleSize(0.06);
-    axis->SetTitleColor(kRed);
-    axis->SetTitle("E_{simHit}^{max} / #Sigma E_{simHit}");
-    axis->Draw();
+  //   //draw an axis on the right side
+  //   TGaxis* axis = new TGaxis(gPad->GetUxmax(),gPad->GetUymin(),gPad->GetUxmax(),gPad->GetUymax(),0,rightmax,510,"+L");
+  //   axis->SetLineColor(kRed);
+  //   axis->SetLabelColor(kRed);
+  //   axis->SetLabelFont(42);
+  //   axis->SetLabelSize(0.04);
+  //   axis->SetTitleFont(42);
+  //   axis->SetTitleSize(0.06);
+  //   axis->SetTitleColor(kRed);
+  //   axis->SetTitle("E_{simHit}^{max} / #Sigma E_{simHit}");
+  //   axis->Draw();
     
-    legend -> Draw("same");
-    latexLabel -> Draw("same");
+  //   legend -> Draw("same");
+  //   latexLabel -> Draw("same");
     
-    c -> Print(Form("%s/c_%s_maxEnergy_vs_local_y__pt%04.1f-%04.1f.png",plotDir.c_str(),label.c_str(),ptMin,ptMax));
-    c -> Print(Form("%s/c_%s_maxEnergy_vs_local_y__pt%04.1f-%04.1f.pdf",plotDir.c_str(),label.c_str(),ptMin,ptMax));
-    delete c;    
-  }
+  //   c -> Print(Form("%s/c_%s_maxEnergy_vs_local_y__pt%04.1f-%04.1f.png",plotDir.c_str(),label.c_str(),ptMin,ptMax));
+  //   c -> Print(Form("%s/c_%s_maxEnergy_vs_local_y__pt%04.1f-%04.1f.pdf",plotDir.c_str(),label.c_str(),ptMin,ptMax));
+  //   delete c;    
+  // }
   
   
   
@@ -883,7 +888,7 @@ int main(int argc, char** argv)
   int EthrIt = 0;
   for(auto Ethr : EthrVals)
   {
-    e = (TEfficiency*)( inFile->Get(Form("p1_matchedRecHit_eff_vs_eta__pt00.8-10.0__Ethr%.1fMeV",Ethr)) );
+    e = (TEfficiency*)( inFile->Get(Form("p1_matchedRecHit_eff_vs_eta__pt00.8-%04.1f__Ethr%.1fMeV",ptRanges.at(ptRanges.size()-1),Ethr)) );
     
     e -> SetMarkerSize(1.0);
     e -> SetMarkerColor(51+int(48/(EthrVals.size()-1))*EthrIt);
@@ -969,7 +974,7 @@ int main(int argc, char** argv)
   EthrIt = 0;
   for(auto Ethr : EthrVals)
   {
-    p = (TProfile*)( inFile->Get(Form("p1_matchedRecHit_totEnergy_vs_eta__pt00.8-10.0__Ethr%.1fMeV",Ethr)) );
+    p = (TProfile*)( inFile->Get(Form("p1_matchedRecHit_totEnergy_vs_eta__pt00.8-%04.1f__Ethr%.1fMeV",ptRanges.at(ptRanges.size()-1),Ethr)) );
     
     p -> SetMarkerSize(1.0);
     p -> SetMarkerColor(51+int(48/(EthrVals.size()-1))*EthrIt);
@@ -1055,7 +1060,7 @@ int main(int argc, char** argv)
   EthrIt = 0;
   for(auto Ethr : EthrVals)
   {
-    p = (TProfile*)( inFile->Get(Form("p1_matchedRecHit_n_vs_eta__pt00.8-10.0__Ethr%.1fMeV",Ethr)) );
+    p = (TProfile*)( inFile->Get(Form("p1_matchedRecHit_n_vs_eta__pt00.8-%04.1f__Ethr%.1fMeV",ptRanges.at(ptRanges.size()-1),Ethr)) );
     
     p -> SetMarkerSize(1.0);
     p -> SetMarkerColor(51+int(48/(EthrVals.size()-1))*EthrIt);
@@ -1144,7 +1149,7 @@ int main(int argc, char** argv)
   EthrIt = 0;
   for(auto Ethr : EthrVals)
   {
-    e = (TEfficiency*)( inFile->Get(Form("p1_matchedRecHit_eff_vs_phi__pt00.8-10.0__Ethr%.1fMeV",Ethr)) );
+    e = (TEfficiency*)( inFile->Get(Form("p1_matchedRecHit_eff_vs_phi__pt00.8-%04.1f__Ethr%.1fMeV",ptRanges.at(ptRanges.size()-1),Ethr)) );
 
     e -> SetMarkerSize(1.0);
     e -> SetMarkerColor(51+int(48/(EthrVals.size()-1))*EthrIt);
@@ -1232,7 +1237,7 @@ int main(int argc, char** argv)
   EthrIt = 0;
   for(auto Ethr : EthrVals)
   {
-    p = (TProfile*)( inFile->Get(Form("p1_matchedRecHit_totEnergy_vs_phi__pt00.8-10.0__Ethr%.1fMeV",Ethr)) );
+    p = (TProfile*)( inFile->Get(Form("p1_matchedRecHit_totEnergy_vs_phi__pt00.8-%04.1f__Ethr%.1fMeV",ptRanges.at(ptRanges.size()-1),Ethr)) );
     
     p -> SetMarkerSize(1.0);
     p -> SetMarkerColor(51+int(48/(EthrVals.size()-1))*EthrIt);

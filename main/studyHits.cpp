@@ -21,6 +21,7 @@
 #include "TLine.h"
 #include "TLegend.h"
 #include "TEfficiency.h"
+#include "Math/Vector3D.h"
 
 
 
@@ -48,6 +49,13 @@ int main(int argc, char** argv)
   //--- get parameters
   std::string inFileName = opts.GetOpt<std::string>("Input.fileName");
   std::string label = opts.GetOpt<std::string>("Input.label");
+  
+  int nCrystalsPerMatrix = opts.GetOpt<int>("Input.nCrystalsPerMatrix");
+  int nMatricesPerMod = opts.GetOpt<int>("Input.nMatricesPerMod");
+  int nModsPerRU = opts.GetOpt<int>("Input.nModsPerRU");
+  int nModsPerType = opts.GetOpt<int>("Input.nModsPerType");
+  int nRUs = opts.GetOpt<int>("Input.nRUs");
+  int nTrays = opts.GetOpt<int>("Input.nTrays");
   
   std::vector<float> ptRanges = opts.GetOpt<std::vector<float> >("Options.ptRanges");
   float ptRangesMin;
@@ -86,7 +94,9 @@ int main(int argc, char** argv)
   
   //--- get tree
   TFile* inFile = TFile::Open(inFileName.c_str(),"READ");
-  TTree* tree = (TTree*)( inFile->Get("FTLDumpHits/hits_tree") );
+  //TTree* tree = (TTree*)( inFile->Get("FTLDumpHits/hits_tree") );
+  TTree* tree = (TTree*)( inFile->Get("FTLDumpHits/DumpHits") );
+  // TTree* tree = (TTree*)( inFile->Get("DumpHits") );
   tree -> SetBranchStatus("*",0);
   
   std::vector<float>* tracks_pt  = new std::vector<float>;
@@ -112,12 +122,24 @@ int main(int argc, char** argv)
   std::vector<int>* simHits_iphi = new std::vector<int>;  
   std::vector<int>* simHits_module = new std::vector<int>;
   std::vector<int>* simHits_modType = new std::vector<int>;
+  std::vector<float>* simHits_entry_local_x = new std::vector<float>;
+  std::vector<float>* simHits_entry_local_y = new std::vector<float>;
+  std::vector<float>* simHits_entry_local_z = new std::vector<float>;
+  std::vector<float>* simHits_exit_local_x = new std::vector<float>;
+  std::vector<float>* simHits_exit_local_y = new std::vector<float>;
+  std::vector<float>* simHits_exit_local_z = new std::vector<float>;
   tree -> SetBranchStatus("simHits_time",1);      tree -> SetBranchAddress("simHits_time",      &simHits_time);
   tree -> SetBranchStatus("simHits_energy",1);    tree -> SetBranchAddress("simHits_energy",    &simHits_energy);
   tree -> SetBranchStatus("simHits_ieta",1);      tree -> SetBranchAddress("simHits_ieta",      &simHits_ieta);
   tree -> SetBranchStatus("simHits_iphi",1);      tree -> SetBranchAddress("simHits_iphi",      &simHits_iphi);
   tree -> SetBranchStatus("simHits_module",1);    tree -> SetBranchAddress("simHits_module",    &simHits_module);
   tree -> SetBranchStatus("simHits_modType",1);   tree -> SetBranchAddress("simHits_modType",   &simHits_modType);
+  // tree -> SetBranchStatus("simHits_entry_local_x",1); tree -> SetBranchAddress("simHits_entry_local_x",&simHits_entry_local_x);
+  // tree -> SetBranchStatus("simHits_entry_local_y",1); tree -> SetBranchAddress("simHits_entry_local_y",&simHits_entry_local_y);
+  // tree -> SetBranchStatus("simHits_entry_local_z",1); tree -> SetBranchAddress("simHits_entry_local_z",&simHits_entry_local_z);
+  // tree -> SetBranchStatus("simHits_exit_local_x",1); tree -> SetBranchAddress("simHits_exit_local_x",&simHits_exit_local_x);
+  // tree -> SetBranchStatus("simHits_exit_local_y",1); tree -> SetBranchAddress("simHits_exit_local_y",&simHits_exit_local_y);
+  // tree -> SetBranchStatus("simHits_exit_local_z",1); tree -> SetBranchAddress("simHits_exit_local_z",&simHits_exit_local_z);
   
   std::vector<std::vector<float> >* matchedSimHits_time = new std::vector<std::vector<float> >;
   std::vector<std::vector<float> >* matchedSimHits_energy = new std::vector<std::vector<float> >;
@@ -175,6 +197,9 @@ int main(int argc, char** argv)
   
   TH1F* h1_simHits_energy = new TH1F("h1_simHit_energy","",1000,0.,100.);
   TH1F* h1_simHits_time = new TH1F("h1_simHit_time","",500,-10.,40.);
+
+  std::map<std::pair<int,int>,TH1F*> h1_simHit_time_perChannel;
+  std::map<std::pair<int,int>,TH1F*> h1_simHit_timeRMS_perChannel;
   
   TH1F* h1_matchedSimHit_track_RDphi = new TH1F("h1_matchedSimHit_track_RDphi","",10000,-1.,1.);
   TH1F* h1_matchedSimHit_track_Dz = new TH1F("h1_matchedSimHit_track_Dz","",10000,-5.,5.);
@@ -220,7 +245,7 @@ int main(int argc, char** argv)
         p1_matchedSimHit_maxOverTotEnergy_vs_local_x_pt[Ethr][std::make_pair(ptRangesMin,ptRangesMax)] = new TProfile(Form("p1_matchedSimHit_maxOverTotEnergy_vs_local_x__pt%04.1f-%04.1f__Ethr%.1fMeV",ptRangesMin,ptRangesMax,Ethr),"",200,-3.,3.);
         p1_matchedSimHit_maxOverTotEnergy_vs_local_y_pt[Ethr][std::make_pair(ptRangesMin,ptRangesMax)] = new TProfile(Form("p1_matchedSimHit_maxOverTotEnergy_vs_local_y__pt%04.1f-%04.1f__Ethr%.1fMeV",ptRangesMin,ptRangesMax,Ethr),"",200,-0.18,0.18);
       }
-      if( label == "barz" )
+      if( label == "barzflat" )
       {
         p1_matchedSimHit_totEnergy_vs_local_x_pt[Ethr][std::make_pair(ptRangesMin,ptRangesMax)] = new TProfile(Form("p1_matchedSimHit_totEnergy_vs_local_x__pt%04.1f-%04.1f__Ethr%.1fMeV",ptRangesMin,ptRangesMax,Ethr),"",200,-0.18,0.18);
         p1_matchedSimHit_totEnergy_vs_local_y_pt[Ethr][std::make_pair(ptRangesMin,ptRangesMax)] = new TProfile(Form("p1_matchedSimHit_totEnergy_vs_local_y__pt%04.1f-%04.1f__Ethr%.1fMeV",ptRangesMin,ptRangesMax,Ethr),"",200,-3.,3.);
@@ -240,7 +265,7 @@ int main(int argc, char** argv)
       h1_matchedSimHit_track_Dz_pt_eta[std::make_pair(ptRangesMin,ptRangesMax)][std::make_pair(etaRangesMin,etaRangesMax)] = new TH1F(Form("h1_matchedSimHit_track_Dz__pt%04.1f-%04.1f__eta%02.1f-%02.1f",ptRangesMin,ptRangesMax,etaRangesMin,etaRangesMax),"",1000,-5.,5.);
     }
   }
-  
+
   std::map<float,std::map<int,int> > simHits_n_vs_energyCut;
   std::map<float,std::map<int,int> > recHits_n_vs_energyCut;
   
@@ -319,6 +344,7 @@ int main(int argc, char** argv)
   
   //--- loop over events
   int nEntries = tree->GetEntries();
+  // nEntries = 1000;
   for(int entry = 0; entry < nEntries; ++entry)
   {
     if( entry%100 == 0 ) std::cout << ">>> reading entry " << entry << " / " << nEntries << "\r" << std::flush;
@@ -326,16 +352,32 @@ int main(int argc, char** argv)
     tree -> GetEntry(entry);
     
 
+    
+    
+    
+    
     //--------------------------
     //--- fill all simHits plots
+    if( debugMode ) std::cout << ">>> fill all simHits plots" << std::endl;
+    std::map<std::pair<int,int>,int> nTracks_perSimHit;
     std::map<std::pair<int,int>,float> energy_perSimHit;
     std::map<std::pair<int,int>,int> RU_perSimHit;
+    bool write = false;
     for(unsigned int simHitIt = 0; simHitIt < simHits_energy->size(); ++simHitIt)
     {
       int ieta = simHits_ieta->at(simHitIt);
       int iphi = simHits_iphi->at(simHitIt);
-      int RU = (simHits_module->at(simHitIt)-1)/6 + (simHits_modType->at(simHitIt)-1)*3;
+      int RU = ((simHits_module->at(simHitIt)-1) + (simHits_modType->at(simHitIt)-1)*nModsPerType) / nModsPerRU;
       float energy = simHits_energy->at(simHitIt);
+      float time = simHits_time->at(simHitIt);
+      
+      // std::pair<int,int> map_key(ieta,iphi);
+      // if( h1_simHit_time_perChannel[map_key] == NULL )
+      // {
+      //   h1_simHit_time_perChannel[map_key] = new TH1F(Form("h1_simHit_time_perChannel_%d-%d",ieta,iphi),"",5000,-5.,45.);
+      //   h1_simHit_time_perChannel[map_key] -> SetDirectory(0);
+      // }
+      // h1_simHit_time_perChannel[map_key] -> Fill( time,energy );
       
       energy_perSimHit[std::make_pair(ieta,iphi)] += energy;
       RU_perSimHit[std::make_pair(ieta,iphi)] = RU;
@@ -362,12 +404,13 @@ int main(int argc, char** argv)
     
     //------------------------------
     //--- fill matched simHits plots
+    if( debugMode ) std::cout << ">>> fill matched simHits plots" << std::endl;
     for(unsigned int trackIt = 0; trackIt < tracks_pt->size(); ++trackIt)
     {
       float pt = tracks_pt->at(trackIt);
       float eta = tracks_eta->at(trackIt);
       float eta_atBTL = tracks_eta_atBTL->at(trackIt);
-      int isHighPurity = tracks_isHighPurity->at(trackIt);
+      int isHighPurity = 1;//tracks_isHighPurity->at(trackIt);
       float genPt = tracks_mcMatch_genPt->at(trackIt);
       float DR = tracks_mcMatch_DR->at(trackIt);
       
@@ -425,28 +468,29 @@ int main(int argc, char** argv)
           if( mapIt.second > energy_max ) energy_max = mapIt.second;
           energy_tot += mapIt.second;
         }
-
-        if( energy_tot <= 0. ) continue;
         
-        p1_matchedSimHit_totEnergy_vs_local_x_pt[Ethr][std::make_pair(ptRanges.at(ptBin-1),ptRanges.at(ptBin))] -> Fill( entry_x,energy_tot );
-        p1_matchedSimHit_totEnergy_vs_local_y_pt[Ethr][std::make_pair(ptRanges.at(ptBin-1),ptRanges.at(ptBin))] -> Fill( entry_y,energy_tot );
-        p1_matchedSimHit_maxEnergy_vs_local_x_pt[Ethr][std::make_pair(ptRanges.at(ptBin-1),ptRanges.at(ptBin))] -> Fill( entry_x,energy_max );
-        p1_matchedSimHit_maxEnergy_vs_local_y_pt[Ethr][std::make_pair(ptRanges.at(ptBin-1),ptRanges.at(ptBin))] -> Fill( entry_y,energy_max );
-        p1_matchedSimHit_maxOverTotEnergy_vs_local_x_pt[Ethr][std::make_pair(ptRanges.at(ptBin-1),ptRanges.at(ptBin))] -> Fill( entry_x,energy_max/energy_tot );
-        p1_matchedSimHit_maxOverTotEnergy_vs_local_y_pt[Ethr][std::make_pair(ptRanges.at(ptBin-1),ptRanges.at(ptBin))] -> Fill( entry_y,energy_max/energy_tot );
+        // if( energy_tot <= 0. ) continue;
+        
+        // p1_matchedSimHit_totEnergy_vs_local_x_pt[Ethr][std::make_pair(ptRanges.at(ptBin-1),ptRanges.at(ptBin))] -> Fill( entry_x,energy_tot );
+        // p1_matchedSimHit_totEnergy_vs_local_y_pt[Ethr][std::make_pair(ptRanges.at(ptBin-1),ptRanges.at(ptBin))] -> Fill( entry_y,energy_tot );
+        // p1_matchedSimHit_maxEnergy_vs_local_x_pt[Ethr][std::make_pair(ptRanges.at(ptBin-1),ptRanges.at(ptBin))] -> Fill( entry_x,energy_max );
+        // p1_matchedSimHit_maxEnergy_vs_local_y_pt[Ethr][std::make_pair(ptRanges.at(ptBin-1),ptRanges.at(ptBin))] -> Fill( entry_y,energy_max );
+        // p1_matchedSimHit_maxOverTotEnergy_vs_local_x_pt[Ethr][std::make_pair(ptRanges.at(ptBin-1),ptRanges.at(ptBin))] -> Fill( entry_x,energy_max/energy_tot );
+        // p1_matchedSimHit_maxOverTotEnergy_vs_local_y_pt[Ethr][std::make_pair(ptRanges.at(ptBin-1),ptRanges.at(ptBin))] -> Fill( entry_y,energy_max/energy_tot );
       }
     }
     
     
     //--------------------------
     //--- fill all recHits plots
+    if( debugMode ) std::cout << ">>> fill all recHits plots" << std::endl;
     for(int jj = 0; jj < 200; ++jj)
     {
       float cut = pow(10.,-2.+3./200.*jj);
       
       for(unsigned int recHitIt = 0; recHitIt < recHits_energy->size(); ++recHitIt)
       {
-        int RU = (recHits_module->at(recHitIt)-1)/6 + (recHits_modType->at(recHitIt)-1)*3;
+        int RU = ((recHits_module->at(recHitIt)-1) + (recHits_modType->at(recHitIt)-1)*nModsPerType) / nModsPerRU;
         if( recHits_energy->at(recHitIt) > cut ) ++recHits_n_vs_energyCut[cut][RU];
       }
     }
@@ -460,6 +504,7 @@ int main(int argc, char** argv)
     
     //------------------------------
     //--- fill matched recHits plots
+    if( debugMode ) std::cout << ">>> fill matched recHits plots" << std::endl;
     int nGoodTracks = 0;
     for(unsigned int trackIt = 0; trackIt < tracks_pt->size(); ++trackIt)
     {
@@ -467,7 +512,7 @@ int main(int argc, char** argv)
       float eta = tracks_eta->at(trackIt);
       float eta_atBTL = tracks_eta_atBTL->at(trackIt);
       float phi_atBTL = tracks_phi_atBTL->at(trackIt);
-      int isHighPurity = tracks_isHighPurity->at(trackIt);
+      int isHighPurity = 1;//tracks_isHighPurity->at(trackIt);
       float genPt = tracks_mcMatch_genPt->at(trackIt);
       float DR = tracks_mcMatch_DR->at(trackIt);
       
@@ -619,6 +664,27 @@ int main(int argc, char** argv)
     } // end loop over tracks
     
     h1_tracks_n -> Fill( nGoodTracks );
+
+    
+    // if( entry%200 == 0 && entry > 0 )
+    // {
+    //   for(auto map_key : h1_simHit_time_perChannel )
+    //   {
+    //     int ieta = map_key.first.first;
+    //     int iphi = map_key.first.second;
+
+    //     if( h1_simHit_timeRMS_perChannel[map_key.first] == NULL )
+    //     {
+    //       h1_simHit_timeRMS_perChannel[map_key.first] = new TH1F(Form("h1_simHit_timeRMS_perChannel_%d-%d",ieta,iphi),"",1000,0.,20.);
+    //       // h1_simHit_timeRMS_perChannel[map_key.first] -> SetDirectory(0);
+    //     }
+        
+    //     h1_simHit_timeRMS_perChannel[map_key.first] -> Fill( map_key.second->GetRMS() );
+        
+    //     map_key.second -> Reset("ICESM");
+    //   }
+    // }
+
     
   } // end loop over events
   
@@ -653,12 +719,9 @@ int main(int argc, char** argv)
   
   
   
-  
-  
-  
   outFile -> cd();
   
-  for(int iRU = 0; iRU < 9; ++iRU)
+  for(int iRU = 0; iRU < nRUs; ++iRU)
   {
     TGraph* g_simHits_n_vs_energyCut = new TGraph();
     TGraph* g_simHits_PU200_n_vs_energyCut = new TGraph();
@@ -676,13 +739,13 @@ int main(int argc, char** argv)
       
       g_simHits_n_vs_energyCut -> SetPoint(jj,cut,1.*simHits_n_vs_energyCut[cut][iRU]/nEntries);
       g_simHits_PU200_n_vs_energyCut -> SetPoint(jj,cut,200.*simHits_n_vs_energyCut[cut][iRU]/nEntries);
-      g_simHits_occ_vs_energyCut -> SetPoint(jj,cut,1.*simHits_n_vs_energyCut[cut][iRU]/nEntries/27648);
-      g_simHits_PU200_occ_vs_energyCut -> SetPoint(jj,cut,200.*simHits_n_vs_energyCut[cut][iRU]/nEntries/27648);
+      g_simHits_occ_vs_energyCut -> SetPoint(jj,cut,1.*simHits_n_vs_energyCut[cut][iRU]/nEntries/(nCrystalsPerMatrix*nMatricesPerMod*nModsPerType*3*nTrays/nRUs));
+      g_simHits_PU200_occ_vs_energyCut -> SetPoint(jj,cut,200.*simHits_n_vs_energyCut[cut][iRU]/nEntries/(nCrystalsPerMatrix*nMatricesPerMod*nModsPerType*3*nTrays/nRUs));
       
       g_recHits_n_vs_energyCut -> SetPoint(jj,cut,1.*recHits_n_vs_energyCut[cut][iRU]/nEntries);
       g_recHits_PU200_n_vs_energyCut -> SetPoint(jj,cut,200.*recHits_n_vs_energyCut[cut][iRU]/nEntries);
-      g_recHits_occ_vs_energyCut -> SetPoint(jj,cut,1.*recHits_n_vs_energyCut[cut][iRU]/nEntries/27648);
-      g_recHits_PU200_occ_vs_energyCut -> SetPoint(jj,cut,200.*recHits_n_vs_energyCut[cut][iRU]/nEntries/27648);
+      g_recHits_occ_vs_energyCut -> SetPoint(jj,cut,1.*recHits_n_vs_energyCut[cut][iRU]/nEntries/(nCrystalsPerMatrix*nMatricesPerMod*nModsPerType*3*nTrays/nRUs));
+      g_recHits_PU200_occ_vs_energyCut -> SetPoint(jj,cut,200.*recHits_n_vs_energyCut[cut][iRU]/nEntries/(nCrystalsPerMatrix*nMatricesPerMod*nModsPerType*3*nTrays/nRUs));
     }
     
     g_simHits_n_vs_energyCut -> Write(Form("g_simHits_n_vs_energyCut_RU%d",iRU));
@@ -695,6 +758,8 @@ int main(int argc, char** argv)
     g_recHits_occ_vs_energyCut -> Write(Form("g_recHits_occ_vs_energyCut_RU%d",iRU));
     g_recHits_PU200_occ_vs_energyCut -> Write(Form("g_recHits_PU200_occ_vs_energyCut_RU%d",iRU));
   }
+  
+
   
   int bytes = outFile -> Write();
   std::cout << "============================================"  << std::endl;

@@ -22,7 +22,7 @@ int main(int argc, char** argv)
   
   if( argc < 2 )
   {
-    std::cout << ">>> drawChannels.exe::usage:   ./bin/drawChannels.exe   crysLayout [1=tile,2=barphi,3=barz]" << std::endl;
+    std::cout << ">>> drawChannels.exe::usage:   ./bin/drawChannels.exe   crysLayout [1=tile,2=barphi,3=barz,4=barzflat]" << std::endl;
     return -1;
   }
   int crysLayout = atoi(argv[1]);
@@ -32,6 +32,7 @@ int main(int argc, char** argv)
   if( crysLayout == 1 ) inFile = TFile::Open("/Users/abenagli/Work/TIMING/TBStudies/data/tile_singleMuPt5.root",  "READ");
   if( crysLayout == 2 ) inFile = TFile::Open("/Users/abenagli/Work/TIMING/TBStudies/data/barphi_singleMuPt5.root","READ");
   if( crysLayout == 3 ) inFile = TFile::Open("/Users/abenagli/Work/TIMING/TBStudies/data/barz_singleMuPt5.root",  "READ");
+  if( crysLayout == 4 ) inFile = TFile::Open("/Users/abenagli/Work/TIMING/TBStudies/data/barzflat_singleMuPtFlat.root",  "READ");
   
   TTree* tree = (TTree*)( inFile->Get("FTLDumpHits/hits_tree") );
   
@@ -57,6 +58,7 @@ int main(int argc, char** argv)
   if( crysLayout == 1 ) outFile = TFile::Open(Form("/Users/abenagli/Work/TIMING/TBStudies/plots/tile_channels.root"),  "RECREATE");
   if( crysLayout == 2 ) outFile = TFile::Open(Form("/Users/abenagli/Work/TIMING/TBStudies/plots/barphi_channels.root"),"RECREATE");
   if( crysLayout == 3 ) outFile = TFile::Open(Form("/Users/abenagli/Work/TIMING/TBStudies/plots/barz_channels.root"),  "RECREATE");
+  if( crysLayout == 4 ) outFile = TFile::Open(Form("/Users/abenagli/Work/TIMING/TBStudies/plots/barzflat_channels.root"),  "RECREATE");
   outFile -> cd();
   
   TProfile2D* p2_crystal = new TProfile2D("p2_crystal","",865,-0.5,864.5,577,-0.5,576.5);
@@ -115,7 +117,7 @@ int main(int argc, char** argv)
         p2_module -> Fill( ieta,iphi,module );
         p2_module_foldIPhi -> Fill( ieta,int(iphi-1)%1,module );        
       }
-
+      
       if( crysLayout == 3 )
       {
         p2_crystal -> Fill( ieta,iphi,crystal );
@@ -125,6 +127,20 @@ int main(int argc, char** argv)
         p2_modType -> Fill( ieta,iphi,modType );
         p2_modType_foldIPhi -> Fill( ieta,int(iphi-1)%1,modType );
         p2_modType_foldIEtaIPhi -> Fill( int(ieta-1)/(18),int(iphi-1)%1,modType );
+        
+        p2_module -> Fill( ieta,iphi,module );
+        p2_module_foldIPhi -> Fill( ieta,int(iphi-1)%1,module );        
+      }
+      
+      if( crysLayout == 4 )
+      {
+        p2_crystal -> Fill( ieta,iphi,crystal );
+        p2_crystal_foldIEta -> Fill( int(ieta-1)%1,iphi,crystal );
+        p2_crystal_foldIEtaIPhi -> Fill( int(ieta-1)%1,int(iphi-1)%64,crystal );
+        
+        p2_modType -> Fill( ieta,iphi,modType );
+        p2_modType_foldIPhi -> Fill( ieta,int(iphi-1)%1,modType );
+        p2_modType_foldIEtaIPhi -> Fill( int(ieta-1)/(14),int(iphi-1)%1,modType );
         
         p2_module -> Fill( ieta,iphi,module );
         p2_module_foldIPhi -> Fill( ieta,int(iphi-1)%1,module );        

@@ -28,7 +28,7 @@ int main(int argc, char** argv)
   
   if( argc < 2 )
   {
-    std::cout << ">>> drawCTRSingles::usage:   " << argv[0] << " configFile.cfg" << std::endl;
+    std::cout << ">>> drawCTRSingleBars::usage:   " << argv[0] << " configFile.cfg" << std::endl;
     return -1;
   }
   
@@ -60,39 +60,20 @@ int main(int argc, char** argv)
   int runMin = opts.GetOpt<int>("Input.runMin");
   int runMax = opts.GetOpt<int>("Input.runMax");
   int maxEntries = opts.GetOpt<int>("Input.maxEntries");
-  std::string treeName = opts.GetOpt<std::string>("Input.treeName");
   
-  TChain* h4 = new TChain(treeName.c_str(),treeName.c_str());
+  TChain* h4 = new TChain("h4","h4");
   for(int run = runMin; run <= runMax; ++run)
   {
-    // std::string fileName = Form("%s/%d/*.root",inputDir.c_str(),run);
     std::string fileName = Form("%s/*%d*.root",inputDir.c_str(),run);
     std::cout << ">>> Adding flle " << fileName << std::endl;
     h4 -> Add(fileName.c_str());
   }
-
-  std::ifstream goodSpillList("goodSpills.txt",std::ios::in);
-  std::map<std::pair<int,int>,bool> goodSpills;
-  std::string line;
-  while(1)
-  {
-    getline(goodSpillList,line,'\n');
-    if( !goodSpillList.good() ) break;
-    if( line.at(0) == '#' ) continue;
-    // std::cout << "Reading line " << line << std::endl;
-
-    std::stringstream ss(line);
-    int run, spill;
-    ss >> run >> spill;
-    goodSpills[std::make_pair(run,spill)] = true;
-  }
   
-
+  
   
   //--- define tree branch addresses
   TreeVars tv;
-  //InitTreeVars(h4,tv,opts);
-  InitTreeVarsFNAL(h4,tv,opts);
+  InitTreeVars(h4,tv,opts);
   
   int nEntries = h4->GetEntries();
   std::cout << ">>> Events read: " << nEntries << std::endl;
@@ -103,7 +84,7 @@ int main(int argc, char** argv)
   // define histograms
 
   std::string conf = opts.GetOpt<std::string>("Input.conf");
-  TFile* outFile = TFile::Open(Form("%s/drawCTRSingles_%s.root",plotDir.c_str(),conf.c_str()),"RECREATE");
+  TFile* outFile = TFile::Open(Form("%s/drawCTRSingleBars_%s.root",plotDir.c_str(),conf.c_str()),"RECREATE");
   outFile -> cd();
 
   TTree* outTree = new TTree("results","results");
@@ -251,9 +232,9 @@ int main(int argc, char** argv)
     float xtalYMin = opts.GetOpt<float>(Form("%s.xtalYMin",ch.c_str())); 
     float xtalYMax = opts.GetOpt<float>(Form("%s.xtalYMax",ch.c_str()));
     
-    p_eff_vs_X[ch] = new TProfile(Form("p_eff_vs_X_%s",ch.c_str()),"",60,0.,30.);
-    p_eff_vs_Y[ch] = new TProfile(Form("p_eff_vs_Y_%s",ch.c_str()),"",60,10.,40.);
-    p2_eff_vs_XY[ch] = new TProfile2D(Form("p2_eff_vs_XY_%s",ch.c_str()),"",60,0.,30.,60,10.,40.);
+    p_eff_vs_X[ch] = new TProfile(Form("p_eff_vs_X_%s",ch.c_str()),"",80,-20.,20.);
+    p_eff_vs_Y[ch] = new TProfile(Form("p_eff_vs_Y_%s",ch.c_str()),"",80,-20.,20.);
+    p2_eff_vs_XY[ch] = new TProfile2D(Form("p2_eff_vs_XY_%s",ch.c_str()),"",80,-20.,20.,80,-20.,20.);
     
     h_amp[ch]     = new TH1F(Form("h_amp_%s",    ch.c_str()),"",4000,0.,1.);
     h_amp_cut[ch] = new TH1F(Form("h_amp_cut_%s",ch.c_str()),"",4000,0.,1.);
@@ -368,15 +349,13 @@ int main(int argc, char** argv)
   {
     if( entry%1000 == 0 ) std::cout << ">>> 1st loop: reading entry " << entry << " / " << nEntries << "\r" << std::flush;
     h4 -> GetEntry(entry);
-    // if( !goodSpills[std::make_pair(tv.run,tv.spill)] ) continue;
     
     
     for(auto ch: channels)
     {
       // reconstruct position
       ReconstructHodoPosition(tv,opts,ch,bool(doTracking),hodoPlane);
-      
-      
+
       if( doTracking )
       {
         if( (tv.nFibresOnX[0] < nFibresMin || tv.nFibresOnX[0] > nFibresMax) ) continue;
@@ -392,7 +371,6 @@ int main(int argc, char** argv)
         // if( fabs((tv.hodoY[1]-tv.hodoY[0]-0.12)) > 2. ) continue;
       }
       
-      
       // fill amplitude and time plots
       int index = opts.GetOpt<int>(Form("%s.index", ch.c_str()));
       std::string ampCh  = opts.GetOpt<std::string>(Form("%s.ampCh", ch.c_str()));
@@ -401,7 +379,7 @@ int main(int argc, char** argv)
       std::vector<std::string> timeMethods = opts.GetOpt<std::vector<std::string> >(Form("%s.timeMethods",ch.c_str()));
       
       if( ampCh == "NULL" ) continue;
-      float amp = tv.amp_max[tv.channelIds[ampCh]] / 1000.;
+      float amp = tv.amp_max[tv.channelIds[ampCh]] / 4096.;
       h_amp[ch] -> Fill( amp );
       
       float ampMin = opts.GetOpt<float>(Form("%s.ampMin",ch.c_str())); 
@@ -465,7 +443,7 @@ int main(int argc, char** argv)
       float timeMinRef = opts.GetOpt<float>(Form("%s.timeMin",refCh.c_str())); 
       float timeMaxRef = opts.GetOpt<float>(Form("%s.timeMax",refCh.c_str()));
       
-      float ampRef = tv.amp_max[tv.channelIds[ampChRef]] / 1000.;
+      float ampRef = tv.amp_max[tv.channelIds[ampChRef]] / 4096.;
       float timTrgRef = trgChRef != "NULL" ? tv.time[tv.channelIds[trgChRef]+tv.timeMethodIds["LED"]] : 0;
       float timRef = tv.time[tv.channelIds[timeChRef]+tv.timeMethodIds[timeMethodsRef.at(0)]];
       
@@ -567,9 +545,9 @@ int main(int argc, char** argv)
 
     c = new TCanvas("c","c",2000,600);
     c -> Divide(3,1);
-    c->cd(1); DrawProfile  (opts,ch,p_eff_vs_X[ch],  ";hodoscope x [mm];efficiency",                 0.,30.,0.001,1.1,kBlack,"",latexLabels[ch]);
-    c->cd(2); DrawProfile  (opts,ch,p_eff_vs_Y[ch],  ";hodoscope y [mm];efficiency",                 0.,30.,0.001,1.1,kBlack,"",latexLabels[ch]);
-    c->cd(3); DrawProfile2D(opts,ch,p2_eff_vs_XY[ch],";hodoscope x [mm];hodoscope y [mm];efficiency",0.,30.,10.,40.,0.001,1.1,latexLabels[ch],&lines_xtal);
+    c->cd(1); DrawProfile  (opts,ch,p_eff_vs_X[ch],  ";hodoscope x [mm];efficiency",                 -30.,30.,0.001,1.1,kBlack,"",latexLabels[ch]);
+    c->cd(2); DrawProfile  (opts,ch,p_eff_vs_Y[ch],  ";hodoscope y [mm];efficiency",                 -30.,30.,0.001,1.1,kBlack,"",latexLabels[ch]);
+    c->cd(3); DrawProfile2D(opts,ch,p2_eff_vs_XY[ch],";hodoscope x [mm];hodoscope y [mm];efficiency",-30.,30.,-30.,30.,0.001,1.1,latexLabels[ch],&lines_xtal);
     PrintCanvas(c,opts,ch,plotDir,"1_eff_vs_XY"); delete c;
 
     c = new TCanvas("c","c",2000,600);
@@ -632,7 +610,6 @@ int main(int argc, char** argv)
   {
     if( entry%1000 == 0 ) std::cout << ">>> 2nd loop: reading entry " << entry << " / " << nEntries << "\r" << std::flush;
     h4 -> GetEntry(entry);
-    // if( !goodSpills[std::make_pair(tv.run,tv.spill)] ) continue;
     
     
     for(auto ch: channels)
@@ -865,7 +842,6 @@ int main(int argc, char** argv)
   {
     if( entry%1000 == 0 ) std::cout << ">>> 3rd loop: reading entry " << entry << " / " << nEntries << "\r" << std::flush;
     h4 -> GetEntry(entry);
-    // if( !goodSpills[std::make_pair(tv.run,tv.spill)] ) continue;
     
     
     for(auto ch: channels)
@@ -882,7 +858,7 @@ int main(int argc, char** argv)
       
       // default event selection
       AnalysisVars av;
-      if( !AcceptEvent(av,tv,opts,ch,nFibresMin,nFibresMax,(CTRRanges_mean[ch]-4.*CTRRanges_sigma[ch]),(CTRRanges_mean[ch]+4.*CTRRanges_sigma[ch])) ) continue;
+      if( !AcceptEvent(av,tv,opts,ch,nFibresMin,nFibresMax,(CTRRanges_mean[ch]-3.*CTRRanges_sigma[ch]),(CTRRanges_mean[ch]+3.*CTRRanges_sigma[ch])) ) continue;
       
       float CTR = av.time - av.timeRef;
       float CTR_ampCorr = CTR - fitFunc_corrAmp[ch]->Eval(av.amp) + fitFunc_corrAmp[ch]->Eval( h_amp_cut[ch]->GetMean() );
@@ -1084,7 +1060,6 @@ int main(int argc, char** argv)
   {
     if( entry%1000 == 0 ) std::cout << ">>> 4th loop: reading entry " << entry << " / " << nEntries << "\r" << std::flush;
     h4 -> GetEntry(entry);
-    // if( !goodSpills[std::make_pair(tv.run,tv.spill)] ) continue;
     
     
     for(auto ch: channels)
@@ -1454,9 +1429,9 @@ int main(int argc, char** argv)
 
         CTRResult result;        
         if( intrinsic < 0 )
-          result = drawCTRPlot(histo,"amp. walk corr.",1,false,false,-1.,Form(";#Deltat [ns]"),latexLabel12,NULL,"",NULL,"");
+          result = drawCTRPlot(histo,"amp. walk corr.",rebin,false,false,-1.,Form(";#Deltat [ns]"),latexLabel12,NULL,"",NULL,"");
         else
-          result = drawCTRPlot(histo,"amp. walk corr.",1,false,true,intrinsic,Form(";#Deltat [ns]"),latexLabel12,NULL,"",NULL,"");
+          result = drawCTRPlot(histo,"amp. walk corr.",rebin,false,false,intrinsic,Form(";#Deltat [ns]"),latexLabel12,NULL,"",NULL,"");
         
         h2_CTR_ampCorr_chess -> SetBinContent( binX+1,binY+1,result.effSigma );
       }

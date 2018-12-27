@@ -5,12 +5,14 @@ void drawGeometryControlPlots(const std::string& inFileName)
   
   
 
-  std::string label = "tile";
-  TLatex* latexLabel = new TLatex(0.16,0.96,Form("11.5#times11.5#timesd mm^{3} tiles"));
+  // std::string label = "tile";
+  // TLatex* latexLabel = new TLatex(0.16,0.96,Form("11.5#times11.5#timesd mm^{3} tiles"));
   // std::string label = "barphi";
   // TLatex* latexLabel = new TLatex(0.16,0.96,Form("3#times50#timesd mm^{3} bars along #phi"));
   // std::string label = "barz";
   // TLatex* latexLabel = new TLatex(0.16,0.96,Form("3#times50#timesd mm^{3} bars along z"));
+  std::string label = "barzflat";
+  TLatex* latexLabel = new TLatex(0.16,0.96,Form("3#times56#timesd mm^{3} flat bars along z"));
   latexLabel -> SetNDC();
   latexLabel -> SetTextFont(42);
   latexLabel -> SetTextSize(0.03);
@@ -65,11 +67,11 @@ void drawGeometryControlPlots(const std::string& inFileName)
   
   c2 -> cd(1);
   gPad -> SetLogy();
-  TH1F* h_Dz = new TH1F("h_Dz","",500,-2.5,2.5);
+  TH1F* h_Dz = new TH1F("h_Dz","",500,-5.,5.);
   t -> Draw("matchedSimHits_track_Dz>>h_Dz","track_pt > 0.7 && track_isHighPurity == 1","goff");
   h_Dz -> SetTitle(";simHit-track #Deltaz (cm);entries");
   h_Dz -> Draw();
-  h_Dz -> Fit("gaus","QLS+","",-0.4,0.4);
+  h_Dz -> Fit("gaus","QLS+","",-1.,1.);
   TF1* f_gaus_Dz = (TF1*)( h_Dz->GetFunction("gaus") );
   TLatex* latex1 = new TLatex(0.20,0.80,Form("#sigma = %.2f mm",10.*f_gaus_Dz->GetParameter(2)));
   latex1 -> SetNDC();
@@ -81,7 +83,7 @@ void drawGeometryControlPlots(const std::string& inFileName)
   
   c2 -> cd(2);
   gPad -> SetLogy();
-  TH1F* h_RDphi = new TH1F("h_RDphi","",500,-0.5,0.5);
+  TH1F* h_RDphi = new TH1F("h_RDphi","",500,-1.,1.);
   t -> Draw("matchedSimHits_track_RDphi>>h_RDphi","","goff");
   h_RDphi -> SetTitle(";simHit-track R#Delta#phi (cm);entries");
   h_RDphi -> Draw();
@@ -97,7 +99,7 @@ void drawGeometryControlPlots(const std::string& inFileName)
   
   c2 -> Print(Form("c_%s_simHit_track.png",label.c_str()));
   
-
+  
   
   c2 = new TCanvas("c2bis","c2bis",1000,500);
   c2 -> Divide(2,1);
@@ -105,7 +107,7 @@ void drawGeometryControlPlots(const std::string& inFileName)
   c2 -> cd(1);
   gPad -> SetLogy();
   h_Dz = new TH1F("h_Dz_bis","",500,-5.,5.);
-  t -> Draw("matchedRecHits_track_Dz>>h_Dz_bis","","goff");
+  t -> Draw("matchedRecHits_track_Dz>>h_Dz_bis","track_pt > 0.7 && track_isHighPurity == 1","goff");
   h_Dz -> SetTitle(";recHit-track #Deltaz (cm);entries");
   h_Dz -> Draw();
   h_Dz -> Fit("gaus","QLS+","",-0.4,0.4);
@@ -114,7 +116,7 @@ void drawGeometryControlPlots(const std::string& inFileName)
   c2 -> cd(2);
   gPad -> SetLogy();
   h_RDphi = new TH1F("h_RDphi_bis","",500,-5.,5.);
-  t -> Draw("matchedRecHits_track_RDphi>>h_RDphi_bis","","goff");
+  t -> Draw("matchedRecHits_track_RDphi>>h_RDphi_bis","track_pt > 0.7 && track_isHighPurity == 1","goff");
   h_RDphi -> SetTitle(";recHit-track R#Delta#phi (cm);entries");
   h_RDphi -> Draw();
   latexLabel -> Draw("same");
@@ -123,25 +125,16 @@ void drawGeometryControlPlots(const std::string& inFileName)
 
 
   
-  TCanvas* c3 = new TCanvas("c3","c3",1000,500);
-  c3 -> Divide(2,1);
-
-  c3 -> cd(1);
-  TH2F* h2_R_vs_ieta = new TH2F("h2_R_vs_ieta","",4,-0.5,3.5,200,117.,118);
-  t -> Draw("matchedSimHits_entry_global_R:((matchedSimHits_ieta-1)%4)>>h2_R_vs_ieta","","COLZ");
-  // TH2F* h2_R_vs_ieta = new TH2F("h2_R_vs_ieta","",16,-0.5,15.5,200,117,118);
-  // t -> Draw("recHits_global_R:((recHits_ieta-1)%16)>>h2_R_vs_ieta","","COLZ");
-  h2_R_vs_ieta -> SetTitle(";recHit local ieta;recHit global R (cm)");
-  latexLabel -> Draw("same");
+  TCanvas* c3 = new TCanvas("c3","c3");
   
-  c3 -> cd(2);
   TH2F* h2_R_vs_iphi = new TH2F("h2_R_vs_iphi","",64,-0.5,63.5,1000,117.,118);
-  t -> Draw("matchedSimHits_entry_global_R:((matchedSimHits_iphi-1)%64)>>h2_R_vs_iphi","matchedSimHits_modType == 1","COLZ");
+  t -> Draw("matchedSimHits_entry_global_R:((matchedSimHits_iphi-1)%64)>>h2_R_vs_iphi","","COLZ");
+  // t -> Draw("matchedSimHits_entry_global_R:((matchedSimHits_iphi-1)%64)>>h2_R_vs_iphi","matchedSimHits_modType == 1","COLZ");
   // TH2F* h2_R_vs_iphi = new TH2F("h2_R_vs_iphi","",4,-0.5,3.5,200,117,118);
   // t -> Draw("recHits_global_R:((recHits_iphi-1)%16)>>h2_R_vs_iphi","","COLZ");
-  h2_R_vs_iphi -> SetTitle(";recHit local iphi;recHit global R (cm)");
-  c3 -> Print("c_recHit_global_R_vs_local_iphi.png");
+  h2_R_vs_iphi -> SetTitle(";simHit local iphi;simHit global R (cm)");
+  c3 -> Print("c_simHit_global_R_vs_local_iphi.png");
   latexLabel -> Draw("same");
 
-  c3 -> Print(Form("c_%s_R_vs_ietaiphi.png",label.c_str()));
+  c3 -> Print(Form("c_%s_simHit_R_vs_iphi.png",label.c_str()));
 }
