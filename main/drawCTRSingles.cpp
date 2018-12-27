@@ -18,6 +18,7 @@
 #include "TCanvas.h"
 #include "TLatex.h"
 #include "TLine.h"
+#include "TRandom3.h"
 
 
 
@@ -31,6 +32,8 @@ int main(int argc, char** argv)
     std::cout << ">>> drawCTRSingles::usage:   " << argv[0] << " configFile.cfg" << std::endl;
     return -1;
   }
+  
+  TRandom3 r;
   
   
   
@@ -48,29 +51,44 @@ int main(int argc, char** argv)
   system(Form("mkdir -p %s",plotDir.c_str()));
   
   std::vector<std::string> channels = opts.GetOpt<std::vector<std::string> >("Channels.channels");
-
+  
   int doTracking = opts.GetOpt<int>("Options.doTracking");
   int hodoPlane  = opts.GetOpt<int>("Options.hodoPlane");
   int nFibresMin = opts.GetOpt<int>("Options.nFibresMin");
   int nFibresMax = opts.GetOpt<int>("Options.nFibresMax");
   
+  float energySmearing = opts.GetOpt<float>("Options.energySmearing");
+  
   
   //--- open input files
   std::string inputDir = opts.GetOpt<std::string>("Input.inputDir");
-  int runMin = opts.GetOpt<int>("Input.runMin");
-  int runMax = opts.GetOpt<int>("Input.runMax");
+  std::string runs = opts.GetOpt<std::string>("Input.runs");
   int maxEntries = opts.GetOpt<int>("Input.maxEntries");
   std::string treeName = opts.GetOpt<std::string>("Input.treeName");
   
   TChain* h4 = new TChain(treeName.c_str(),treeName.c_str());
-  for(int run = runMin; run <= runMax; ++run)
+  std::stringstream ss(runs);
+  std::string token;
+  while( std::getline(ss,token,',') )
   {
-    // std::string fileName = Form("%s/%d/*.root",inputDir.c_str(),run);
-    std::string fileName = Form("%s/*%d*.root",inputDir.c_str(),run);
-    std::cout << ">>> Adding flle " << fileName << std::endl;
-    h4 -> Add(fileName.c_str());
+    std::stringstream ss2(token);
+    std::string token2;
+    int runMin = -1;
+    int runMax = -1;
+    while( std::getline(ss2,token2,'-') )
+    {
+      if( runMin != -1 && runMax == -1 ) runMax = atoi(token2.c_str());
+      if( runMin == -1 ) runMin = atoi(token2.c_str());
+    }
+    for(int run = runMin; run <= runMax; ++run)
+    {
+      // std::string fileName = Form("%s/%d/*.root",inputDir.c_str(),run);
+      std::string fileName = Form("%s/*%d*.root",inputDir.c_str(),run);
+      std::cout << ">>> Adding flle " << fileName << std::endl;
+      h4 -> Add(fileName.c_str());
+    }
   }
-
+  
   std::ifstream goodSpillList("goodSpills.txt",std::ios::in);
   std::map<std::pair<int,int>,bool> goodSpills;
   std::string line;
@@ -91,8 +109,8 @@ int main(int argc, char** argv)
   
   //--- define tree branch addresses
   TreeVars tv;
-  //InitTreeVars(h4,tv,opts);
-  InitTreeVarsFNAL(h4,tv,opts);
+  InitTreeVars(h4,tv,opts);
+  //InitTreeVarsFNAL(h4,tv,opts);
   
   int nEntries = h4->GetEntries();
   std::cout << ">>> Events read: " << nEntries << std::endl;
@@ -168,6 +186,7 @@ int main(int argc, char** argv)
 
   std::map<std::string,TH1F*> h_amp;
   std::map<std::string,TH1F*> h_amp_cut;
+  std::map<std::string,TH1F*> h_amp_final;
   std::map<std::string,TProfile*> p_amp_vs_X;
   std::map<std::string,TProfile*> p_amp_vs_Y;
   std::map<std::string,TProfile2D*> p2_amp_vs_XY;
@@ -255,14 +274,15 @@ int main(int argc, char** argv)
     p_eff_vs_Y[ch] = new TProfile(Form("p_eff_vs_Y_%s",ch.c_str()),"",60,10.,40.);
     p2_eff_vs_XY[ch] = new TProfile2D(Form("p2_eff_vs_XY_%s",ch.c_str()),"",60,0.,30.,60,10.,40.);
     
-    h_amp[ch]     = new TH1F(Form("h_amp_%s",    ch.c_str()),"",4000,0.,1.);
-    h_amp_cut[ch] = new TH1F(Form("h_amp_cut_%s",ch.c_str()),"",4000,0.,1.);
+    h_amp[ch]       = new TH1F(Form("h_amp_%s",      ch.c_str()),"",1000,0.,1.);
+    h_amp_cut[ch]   = new TH1F(Form("h_amp_cut_%s",  ch.c_str()),"",1000,0.,1.);
+    h_amp_final[ch] = new TH1F(Form("h_amp_final_%s",ch.c_str()),"",1000,0.,1.);
     p_amp_vs_X[ch] = new TProfile(Form("p_amp_vs_X_%s",ch.c_str()),"",int(2*(xtalXMax-xtalXMin)),xtalXMin,xtalXMax);
     p_amp_vs_Y[ch] = new TProfile(Form("p_amp_vs_Y_%s",ch.c_str()),"",int(2*(xtalYMax-xtalYMin)),xtalYMin,xtalYMax);
     p2_amp_vs_XY[ch] = new TProfile2D(Form("p2_amp_vs_XY_%s",ch.c_str()),"",int(1*(xtalXMax-xtalXMin)),xtalXMin,xtalXMax,int(1*(xtalYMax-xtalYMin)),xtalYMin,xtalYMax);
     
-    h_RT[ch]     = new TH1F(Form("h_RT_%s",    ch.c_str()),"",2500,0.,100.);
-    h_RT_cut[ch] = new TH1F(Form("h_RT_cut_%s",ch.c_str()),"",2500,0.,100.);
+    h_RT[ch]     = new TH1F(Form("h_RT_%s",    ch.c_str()),"",2500,0.,30.);
+    h_RT_cut[ch] = new TH1F(Form("h_RT_cut_%s",ch.c_str()),"",2500,0.,30.);
     
     h_time[ch] = new TH1F(Form("h_time_%s",ch.c_str()),"",200,0.,200.);
     h_tot[ch] = new TH1F(Form("h_tot_%s",ch.c_str()),"",100,0.,200.);
@@ -272,9 +292,9 @@ int main(int argc, char** argv)
     p_time_ampCorr_vs_amp[ch] = new TProfile(Form("p_time_ampCorr_vs_amp_%s",ch.c_str()),"",100,ampMin,ampMax);
     p_time_ampCorr_posCorr_vs_amp[ch] = new TProfile(Form("p_time_ampCorr_posCorr_vs_amp_%s",ch.c_str()),"",100,ampMin,ampMax);
     
-    p_time_vs_RT[ch] = new TProfile(Form("p_time_vs_RT_%s",ch.c_str()),"",250,0.,100.);
-    p_time_RTCorr_vs_RT[ch] = new TProfile(Form("p_time_RTCorr_vs_RT_%s",ch.c_str()),"",250,0.,100.);
-    p_time_RTCorr_posCorr_vs_RT[ch] = new TProfile(Form("p_time_RTCorr_posCorr_vs_RT_%s",ch.c_str()),"",250,0.,100.);
+    p_time_vs_RT[ch] = new TProfile(Form("p_time_vs_RT_%s",ch.c_str()),"",250,0.,3.);
+    p_time_RTCorr_vs_RT[ch] = new TProfile(Form("p_time_RTCorr_vs_RT_%s",ch.c_str()),"",250,0.,3.);
+    p_time_RTCorr_posCorr_vs_RT[ch] = new TProfile(Form("p_time_RTCorr_posCorr_vs_RT_%s",ch.c_str()),"",250,0.,3.);
     
     p_time_vs_X[ch] = new TProfile(Form("p_time_vs_X_%s",ch.c_str()),"",int(2*(xtalXMax-xtalXMin)),xtalXMin,xtalXMax);
     p_time_cut_vs_X[ch] = new TProfile(Form("p_time_cut_vs_X_%s",ch.c_str()),"",int(2*(xtalXMax-xtalXMin)),xtalXMin,xtalXMax);
@@ -311,12 +331,12 @@ int main(int argc, char** argv)
     p_time_distAmpCorr_vs_amp[ch] = new TProfile(Form("p_time_distAmpCorr_vs_amp_%s",ch.c_str()),"",100,ampMin,ampMax);
     p_time_distAmpCorr_vs_dist[ch] = new TProfile(Form("p_time_distAmpCorr_vs_dist_%s",ch.c_str()),"",100,0.,10.);
     
-    p2_time_vs_distRT[ch] = new TProfile2D(Form("p2_time_vs_distRT_%s",ch.c_str()),"",20,0.,10.,20,rtMin,rtMax);
-    p_time_distRTCorr_vs_RT[ch] = new TProfile(Form("p_time_distRTCorr_vs_RT_%s",ch.c_str()),"",100,rtMin,rtMax);
+    p2_time_vs_distRT[ch] = new TProfile2D(Form("p2_time_vs_distRT_%s",ch.c_str()),"",20,0.,10.,50,rtMin,rtMax);
+    p_time_distRTCorr_vs_RT[ch] = new TProfile(Form("p_time_distRTCorr_vs_RT_%s",ch.c_str()),"",250,rtMin,rtMax);
     p_time_distRTCorr_vs_amp[ch] = new TProfile(Form("p_time_distRTCorr_vs_amp_%s",ch.c_str()),"",100,ampMin,ampMax);
     p_time_distRTCorr_vs_dist[ch] = new TProfile(Form("p_time_distRTCorr_vs_dist_%s",ch.c_str()),"",100,0.,10.);
     
-    h_CTR_raw[ch] = new TH1F(Form("h_CTR_raw_%s",ch.c_str()),"",10000,-50.,50.);
+    h_CTR_raw[ch] = new TH1F(Form("h_CTR_raw_%s",ch.c_str()),"",20000,-200.,200.);
     
     h_occupancyX[ch]   = new TH1F(Form("h_occupancyX_%s",ch.c_str()),  "",1.*(xtalXMax-xtalXMin),xtalXMin,xtalXMax);
     h_occupancyY[ch]   = new TH1F(Form("h_occupancyY_%s",ch.c_str()),  "",1.*(xtalYMax-xtalYMin),xtalYMin,xtalYMax);    
@@ -377,6 +397,10 @@ int main(int argc, char** argv)
       ReconstructHodoPosition(tv,opts,ch,bool(doTracking),hodoPlane);
       
       
+      // if( (tv.amp_max[tv.channelIds["19"]]/1000.) < 0.170 ) continue;
+      // if( (tv.amp_max[tv.channelIds["22"]]/1000.) < 0.130 ) continue;
+      
+      
       if( doTracking )
       {
         if( (tv.nFibresOnX[0] < nFibresMin || tv.nFibresOnX[0] > nFibresMax) ) continue;
@@ -386,10 +410,11 @@ int main(int argc, char** argv)
       }
       else
       {
-        if( (tv.nFibresOnX[hodoPlane] < nFibresMin || tv.nFibresOnX[hodoPlane] > nFibresMax) ) continue;
-        if( (tv.nFibresOnY[hodoPlane] < nFibresMin || tv.nFibresOnY[hodoPlane] > nFibresMax) ) continue;
+        // if( (tv.nFibresOnX[hodoPlane] < nFibresMin || tv.nFibresOnX[hodoPlane] > nFibresMax) ) continue;
+        // if( (tv.nFibresOnY[hodoPlane] < nFibresMin || tv.nFibresOnY[hodoPlane] > nFibresMax) ) continue;
         // if( fabs((tv.hodoX[1]-tv.hodoX[0]-3.50)) > 2. ) continue;
         // if( fabs((tv.hodoY[1]-tv.hodoY[0]-0.12)) > 2. ) continue;
+        if( tv.nTracks != 1 ) continue;
       }
       
       
@@ -401,7 +426,7 @@ int main(int argc, char** argv)
       std::vector<std::string> timeMethods = opts.GetOpt<std::vector<std::string> >(Form("%s.timeMethods",ch.c_str()));
       
       if( ampCh == "NULL" ) continue;
-      float amp = tv.amp_max[tv.channelIds[ampCh]] / 1000.;
+      float amp = tv.amp_max[tv.channelIds[ampCh]] / 4096.;
       h_amp[ch] -> Fill( amp );
       
       float ampMin = opts.GetOpt<float>(Form("%s.ampMin",ch.c_str())); 
@@ -411,7 +436,7 @@ int main(int argc, char** argv)
       float xtalYMin = opts.GetOpt<float>(Form("%s.xtalYMin",ch.c_str())); 
       float xtalYMax = opts.GetOpt<float>(Form("%s.xtalYMax",ch.c_str()));
       
-      if( amp > ampMin )
+      if( amp > ampMin && amp < ampMax)
       {
         if( tv.beamY > xtalYMin && tv.beamY < xtalYMax) p_eff_vs_X[ch] -> Fill( tv.beamX,1. );
         if( tv.beamX > xtalXMin && tv.beamX < xtalXMax) p_eff_vs_Y[ch] -> Fill( tv.beamY,1. );
@@ -465,7 +490,7 @@ int main(int argc, char** argv)
       float timeMinRef = opts.GetOpt<float>(Form("%s.timeMin",refCh.c_str())); 
       float timeMaxRef = opts.GetOpt<float>(Form("%s.timeMax",refCh.c_str()));
       
-      float ampRef = tv.amp_max[tv.channelIds[ampChRef]] / 1000.;
+      float ampRef = tv.amp_max[tv.channelIds[ampChRef]] / 4096.;
       float timTrgRef = trgChRef != "NULL" ? tv.time[tv.channelIds[trgChRef]+tv.timeMethodIds["LED"]] : 0;
       float timRef = tv.time[tv.channelIds[timeChRef]+tv.timeMethodIds[timeMethodsRef.at(0)]];
       
@@ -503,8 +528,8 @@ int main(int argc, char** argv)
     float xtalXMax = opts.GetOpt<float>(Form("%s.xtalXMax",ch.c_str()));
     float xtalYMin = opts.GetOpt<float>(Form("%s.xtalYMin",ch.c_str())); 
     float xtalYMax = opts.GetOpt<float>(Form("%s.xtalYMax",ch.c_str()));
-    float ampLow = h_amp_cut[ch]->GetMean()-2.*h_amp_cut[ch]->GetRMS();
-    float ampHig = h_amp_cut[ch]->GetMean()+2.*h_amp_cut[ch]->GetRMS();
+    float ampLow = h_amp_cut[ch]->GetMean()-1.*h_amp_cut[ch]->GetRMS();
+    float ampHig = h_amp_cut[ch]->GetMean()+1.*h_amp_cut[ch]->GetRMS();
     
     TLine* line_min_amp = new TLine(ampMin,h_amp[ch]->GetMinimum(),ampMin,h_amp[ch]->GetMaximum());
     TLine* line_max_amp = new TLine(ampMax,h_amp[ch]->GetMinimum(),ampMax,h_amp[ch]->GetMaximum());
@@ -555,7 +580,7 @@ int main(int argc, char** argv)
     lines_xtal.push_back(line_xtalYHig);
     
     
-    c = new TCanvas(); DrawHistogram(opts,ch,h_amp[ch],     ";amplitude [V];entries", 0.,1.1*ampMax,4,true,latexLabels[ch],&lines_amp);  PrintCanvas(c,opts,ch,plotDir,"1_amp");      delete c;
+    // c = new TCanvas(); DrawHistogram(opts,ch,h_amp[ch],     ";amplitude [V];entries", 0.,1.1*ampMax,4,true,latexLabels[ch],&lines_amp,true,ampMin,0.6);  PrintCanvas(c,opts,ch,plotDir,"1_amp");      delete c;
     c = new TCanvas(); DrawHistogram(opts,ch,h_time[ch],    ";time [ns];entries",     0.,200.,      1,true,latexLabels[ch],&lines_time); PrintCanvas(c,opts,ch,plotDir,"1_time");     delete c;
     c = new TCanvas(); DrawHistogram(opts,ch,h_tot[ch],     ";ToT [ns];entries",      0.,200.,      1,true,latexLabels[ch],&lines_tot);  PrintCanvas(c,opts,ch,plotDir,"1_tot");      delete c;
     c = new TCanvas(); DrawHistogram(opts,ch,h_RT[ch],      ";rise time [ns];entries",rtMin,rtMax,  1,true,latexLabels[ch],&lines_rt);   PrintCanvas(c,opts,ch,plotDir,"1_RT");       delete c;
@@ -567,9 +592,9 @@ int main(int argc, char** argv)
 
     c = new TCanvas("c","c",2000,600);
     c -> Divide(3,1);
-    c->cd(1); DrawProfile  (opts,ch,p_eff_vs_X[ch],  ";hodoscope x [mm];efficiency",                 0.,30.,0.001,1.1,kBlack,"",latexLabels[ch]);
-    c->cd(2); DrawProfile  (opts,ch,p_eff_vs_Y[ch],  ";hodoscope y [mm];efficiency",                 0.,30.,0.001,1.1,kBlack,"",latexLabels[ch]);
-    c->cd(3); DrawProfile2D(opts,ch,p2_eff_vs_XY[ch],";hodoscope x [mm];hodoscope y [mm];efficiency",0.,30.,10.,40.,0.001,1.1,latexLabels[ch],&lines_xtal);
+    c->cd(1); DrawProfile  (opts,ch,p_eff_vs_X[ch],  ";hodoscope x [mm];efficiency",                  0.,30.,0.001,1.1,kBlack,"",latexLabels[ch]);
+    c->cd(2); DrawProfile  (opts,ch,p_eff_vs_Y[ch],  ";hodoscope y [mm];efficiency",                 10.,40.,0.001,1.1,kBlack,"",latexLabels[ch]);
+    c->cd(3); DrawProfile2D(opts,ch,p2_eff_vs_XY[ch],";hodoscope x [mm];hodoscope y [mm];efficiency", 0.,30.,10.,40.,0.001,1.1,latexLabels[ch],&lines_xtal);
     PrintCanvas(c,opts,ch,plotDir,"1_eff_vs_XY"); delete c;
 
     c = new TCanvas("c","c",2000,600);
@@ -632,11 +657,14 @@ int main(int argc, char** argv)
   {
     if( entry%1000 == 0 ) std::cout << ">>> 2nd loop: reading entry " << entry << " / " << nEntries << "\r" << std::flush;
     h4 -> GetEntry(entry);
+    if( debugMode ) std::cout << ">>> entry " << entry << std::endl;
     // if( !goodSpills[std::make_pair(tv.run,tv.spill)] ) continue;
     
     
     for(auto ch: channels)
     {
+      if( debugMode ) std::cout << ">>>>>> " << ch << std::endl;
+      
       int index = opts.GetOpt<int>(Form("%s.index", ch.c_str()));
       float xtalXMin = opts.GetOpt<float>(Form("%s.xtalXMin",ch.c_str()));
       float xtalXMax = opts.GetOpt<float>(Form("%s.xtalXMax",ch.c_str()));
@@ -646,15 +674,20 @@ int main(int argc, char** argv)
       
       // reconstruct position
       ReconstructHodoPosition(tv,opts,ch,bool(doTracking),hodoPlane);      
+      if( debugMode ) std::cout << ">>>>>>>>> hodo position reconstructed " << std::endl;
       
       // default event selection
       AnalysisVars av;
       if( !AcceptEvent(av,tv,opts,ch,nFibresMin,nFibresMax,(CTRRanges_mean[ch]-4.*CTRRanges_sigma[ch]),(CTRRanges_mean[ch]+4.*CTRRanges_sigma[ch])) ) continue;
-
+      if( debugMode ) std::cout << ">>>>>>>>> AcceptEvent() done " << std::endl;
+      
+      h_amp_final[ch] -> Fill( av.amp );
+      
       std::string Vbias = opts.GetOpt<std::string>(Form("%s.Vbias", ch.c_str()));
       std::string NINOthr = opts.GetOpt<std::string>(Form("%s.NINOthr", ch.c_str()));
       t_Vbias[ch] = tv.VbiasVals[Vbias];
       t_NINOthr[ch] = tv.NINOthrVals[NINOthr];
+      if( debugMode ) std::cout << ">>>>>>>>> Vbias / NINO thr. done " << std::endl;
       
       p_time_vs_amp[ch] -> Fill( av.amp,av.time-av.timeRef );
       p_time_vs_RT[ch] -> Fill( av.rt,av.time-av.timeRef );
@@ -668,18 +701,23 @@ int main(int argc, char** argv)
       if( (tv.beamX >= 0.5*(xtalXMin+xtalXMax)-1.5) && (tv.beamX <= 0.5*(xtalXMin+xtalXMax)+1.5) )
         p_time_cut_vs_Y[ch] -> Fill( tv.beamY,av.time-av.timeRef );
       p2_time_vs_XY[ch] -> Fill( tv.beamX,tv.beamY,av.time-av.timeRef );
-
-      int binX = h_chessOccupancyX[ch] -> Fill(tv.beamX);
-      int binY = h_chessOccupancyY[ch] -> Fill(tv.beamY);
-      h2_chessOccupancyXY[ch] -> Fill(tv.beamX,tv.beamY);
-
+      
       nSelectedEntries[ch] += 1;
       h2_occupancyXY[ch] -> Fill(tv.beamX,tv.beamY);
-
-      if( binX >= 0 && binY >= 0 )
+      
+      int nBinsX = opts.GetOpt<int>(Form("%s.nBinsX",ch.c_str()));
+      int nBinsY = opts.GetOpt<int>(Form("%s.nBinsY",ch.c_str()));
+      if( nBinsX > 0 && nBinsY > 0 )
       {
-        std::string label(Form("%s_%d-%d",ch.c_str(),binX-1,binY-1));
-        map_p_time_vs_amp[label] -> Fill( av.amp,av.time-av.timeRef );
+        int binX = h_chessOccupancyX[ch] -> Fill(tv.beamX);
+        int binY = h_chessOccupancyY[ch] -> Fill(tv.beamY);
+        h2_chessOccupancyXY[ch] -> Fill(tv.beamX,tv.beamY);
+        
+        if( binX >= 0 && binY >= 0 )
+        {
+          std::string label(Form("%s_%d-%d",ch.c_str(),binX-1,binY-1));
+          map_p_time_vs_amp[label] -> Fill( av.amp,av.time-av.timeRef );
+        }
       }
     }
   }
@@ -695,7 +733,6 @@ int main(int argc, char** argv)
   for(auto ch: channels)
   {
     int index = opts.GetOpt<int>(Form("%s.index", ch.c_str()));
-    if( index < 0 ) continue;
     
     float ampMin = opts.GetOpt<float>(Form("%s.ampMin",ch.c_str())); 
     float ampMax = opts.GetOpt<float>(Form("%s.ampMax",ch.c_str()));
@@ -705,8 +742,14 @@ int main(int argc, char** argv)
     float xtalXMax = opts.GetOpt<float>(Form("%s.xtalXMax",ch.c_str()));
     float xtalYMin = opts.GetOpt<float>(Form("%s.xtalYMin",ch.c_str())); 
     float xtalYMax = opts.GetOpt<float>(Form("%s.xtalYMax",ch.c_str()));
-    float timeLow = CTRRanges_mean[ch]-3.*CTRRanges_sigma[ch];
+    float timeLow = CTRRanges_mean[ch]-4.*CTRRanges_sigma[ch];
     float timeHig = CTRRanges_mean[ch]+3.*CTRRanges_sigma[ch];
+    
+    TLine* line_min_amp = new TLine(ampMin,h_amp[ch]->GetMinimum(),ampMin,h_amp[ch]->GetMaximum());
+    TLine* line_max_amp = new TLine(ampMax,h_amp[ch]->GetMinimum(),ampMax,h_amp[ch]->GetMaximum());
+    std::vector<TLine*> lines_amp;
+    lines_amp.push_back(line_min_amp);
+    lines_amp.push_back(line_max_amp);
     
     TLine* line_xtalXLow = new TLine(0.5*(xtalXMin+xtalXMax)-1.5,xtalYMin,0.5*(xtalXMin+xtalXMax)-1.5,xtalYMax);
     line_xtalXLow -> SetLineStyle(2);
@@ -733,6 +776,15 @@ int main(int argc, char** argv)
     lines_xtal.push_back(line_xtalYHig);
     
     
+    c = new TCanvas();
+    std::vector<TH1F*> hs_amp;
+    hs_amp.push_back(h_amp[ch]); 
+    hs_amp.push_back(h_amp_final[ch]); 
+    DrawHistogram(opts,ch,hs_amp,";amplitude [V];entries", 0.,1.1*ampMax,4,true,latexLabels[ch],&lines_amp,true,ampMin,0.6);
+    PrintCanvas(c,opts,ch,plotDir,"1_amp");
+    delete c;
+    
+    
     prof = p_time_vs_amp[ch];
     
     std::string fitFunc = opts.GetOpt<std::string>(Form("%s.fitFunc",ch.c_str()));
@@ -747,10 +799,13 @@ int main(int argc, char** argv)
     prof -> Fit(fitFunc_corrAmp[ch],"QNRS+","",fitXMin,fitXMax);
     
     c = new TCanvas();
-    DrawProfile(opts,ch,p_time_vs_amp[ch],";amplitude [V];#Delta_{t} [ns]",ampMin,ampMax,timeLow,timeHig,kBlack,"",latexLabels[ch],fitFunc_corrAmp[ch]);
+    DrawProfile(opts,ch,p_time_vs_amp[ch],";amplitude [V];#Delta_{t} [ns]",ampMin,ampMax,timeLow,timeHig,kBlack,"",latexLabels[ch],fitFunc_corrAmp[ch],h_amp_cut[ch]->GetMean());
     PrintCanvas(c,opts,ch,plotDir,"2_time_vs_amp");
     delete c;
     
+    
+    if( index < 0 ) continue;
+
     
     prof = p_time_vs_RT[ch];
     
@@ -810,6 +865,8 @@ int main(int argc, char** argv)
     delete c;
     
     
+    if( nBinsX <= 0 || nBinsY <= 0 ) continue;
+    
     c = new TCanvas();
     DrawHistogram2D(opts,ch,h2_chessOccupancyXY[ch],";hodoscope x [mm];hodoscope y [mm];entries",xtalXMin,xtalXMax,xtalYMin,xtalYMax,h2_chessOccupancyXY[ch]->GetMinimum(),h2_chessOccupancyXY[ch]->GetMaximum(),false,false,"colz",latexLabels[ch]);
     PrintCanvas(c,opts,ch,plotDir,"2_chessOccupancyXY");
@@ -844,7 +901,7 @@ int main(int argc, char** argv)
     h_CTR_RTCorr[ch]  = new TH1F(Form("h_CTR_RTCorr_%s",ch.c_str()), "",1000,CTRRanges_mean[ch]-5.*CTRRanges_sigma[ch],CTRRanges_mean[ch]+5.*CTRRanges_sigma[ch]);
     h_CTR_distAmpCorr[ch] = new TH1F(Form("h_CTR_distAmpCorr_%s",ch.c_str()),"",1000,CTRRanges_mean[ch]-5.*CTRRanges_sigma[ch],CTRRanges_mean[ch]+5.*CTRRanges_sigma[ch]);
     h_CTR_distRTCorr[ch] = new TH1F(Form("h_CTR_distRTCorr_%s",ch.c_str()),"",1000,CTRRanges_mean[ch]-5.*CTRRanges_sigma[ch],CTRRanges_mean[ch]+5.*CTRRanges_sigma[ch]);
-
+    
     h_CTR[ch] -> Sumw2();
     h_CTR_ampCorr[ch] -> Sumw2();
     h_CTR_RTCorr[ch]  -> Sumw2();
@@ -883,6 +940,7 @@ int main(int argc, char** argv)
       // default event selection
       AnalysisVars av;
       if( !AcceptEvent(av,tv,opts,ch,nFibresMin,nFibresMax,(CTRRanges_mean[ch]-4.*CTRRanges_sigma[ch]),(CTRRanges_mean[ch]+4.*CTRRanges_sigma[ch])) ) continue;
+      if( energySmearing > 0. ) av.amp = av.amp * r.Gaus(1.,energySmearing);
       
       float CTR = av.time - av.timeRef;
       float CTR_ampCorr = CTR - fitFunc_corrAmp[ch]->Eval(av.amp) + fitFunc_corrAmp[ch]->Eval( h_amp_cut[ch]->GetMean() );
@@ -932,14 +990,19 @@ int main(int argc, char** argv)
       h_CTR_distAmpCorr[ch] -> Fill( CTR_distAmpCorr,weight );
       h_CTR_distRTCorr[ch] -> Fill( CTR_distRTCorr,weight );
       
-      binX = h_chessOccupancyX[ch] -> Fill(tv.beamX);
-      binY = h_chessOccupancyY[ch] -> Fill(tv.beamY);
-
-      if( binX >= 0 && binY >= 0 )
+      int nBinsX = opts.GetOpt<int>(Form("%s.nBinsX",ch.c_str()));
+      int nBinsY = opts.GetOpt<int>(Form("%s.nBinsY",ch.c_str()));
+      if( nBinsX > 0 && nBinsY > 0 )
       {
-        std::string label(Form("%s_%d-%d",ch.c_str(),binX-1,binY-1));
-        map_h_CTR_ampCorr[label] -> Fill( CTR-fitFunc_corrAmp[label]->Eval(av.amp)+fitFunc_corrAmp[label]->Eval(h_amp_cut[ch]->GetMean()) );
-        // map_h_CTR_ampCorr[label] -> Fill( CTR-fitFunc_corrAmp[ch]->Eval(av.amp)+fitFunc_corrAmp[ch]->Eval(h_amp_cut[ch]->GetMean()) );
+        binX = h_chessOccupancyX[ch] -> Fill(tv.beamX);
+        binY = h_chessOccupancyY[ch] -> Fill(tv.beamY);
+        
+        if( binX >= 0 && binY >= 0 )
+        {
+          std::string label(Form("%s_%d-%d",ch.c_str(),binX-1,binY-1));
+          map_h_CTR_ampCorr[label] -> Fill( CTR-fitFunc_corrAmp[label]->Eval(av.amp)+fitFunc_corrAmp[label]->Eval(h_amp_cut[ch]->GetMean()) );
+          // map_h_CTR_ampCorr[label] -> Fill( CTR-fitFunc_corrAmp[ch]->Eval(av.amp)+fitFunc_corrAmp[ch]->Eval(h_amp_cut[ch]->GetMean()) );
+        }
       }
     }
   }
@@ -952,7 +1015,7 @@ int main(int argc, char** argv)
   {
     int index = opts.GetOpt<int>(Form("%s.index", ch.c_str()));
     if( index < 0 ) continue;
-
+    
     float ampMin = opts.GetOpt<float>(Form("%s.ampMin",ch.c_str())); 
     float ampMax = opts.GetOpt<float>(Form("%s.ampMax",ch.c_str()));
     float rtMin = opts.GetOpt<float>(Form("%s.rtMin",ch.c_str())); 
@@ -961,8 +1024,8 @@ int main(int argc, char** argv)
     float xtalXMax = opts.GetOpt<float>(Form("%s.xtalXMax",ch.c_str()));
     float xtalYMin = opts.GetOpt<float>(Form("%s.xtalYMin",ch.c_str())); 
     float xtalYMax = opts.GetOpt<float>(Form("%s.xtalYMax",ch.c_str()));
-    float timeLow = CTRRanges_mean[ch]-3.*CTRRanges_sigma[ch];
-    float timeHig = CTRRanges_mean[ch]+3.*CTRRanges_sigma[ch];
+    float timeLow = CTRRanges_mean[ch]-2.*CTRRanges_sigma[ch];
+    float timeHig = CTRRanges_mean[ch]+1.*CTRRanges_sigma[ch];
     
     TLine* line_xtalXLow = new TLine(0.5*(xtalXMin+xtalXMax)-1.5,xtalYMin,0.5*(xtalXMin+xtalXMax)-1.5,xtalYMax);
     line_xtalXLow -> SetLineStyle(2);
@@ -1102,6 +1165,7 @@ int main(int argc, char** argv)
       // default event selection
       AnalysisVars av;
       if( !AcceptEvent(av,tv,opts,ch,nFibresMin,nFibresMax,(CTRRanges_mean[ch]-3.*CTRRanges_sigma[ch]),(CTRRanges_mean[ch]+3.*CTRRanges_sigma[ch])) ) continue;
+      if( energySmearing > 0. ) av.amp = av.amp * r.Gaus(1.,energySmearing);
       
       float CTR = av.time - av.timeRef;
       float CTR_ampCorr = CTR - fitFunc_corrAmp[ch]->Eval(av.amp) + fitFunc_corrAmp[ch]->Eval( h_amp_cut[ch]->GetMean() );
@@ -1156,8 +1220,8 @@ int main(int argc, char** argv)
     float xtalXMax = opts.GetOpt<float>(Form("%s.xtalXMax",ch.c_str()));
     float xtalYMin = opts.GetOpt<float>(Form("%s.xtalYMin",ch.c_str())); 
     float xtalYMax = opts.GetOpt<float>(Form("%s.xtalYMax",ch.c_str()));
-    float timeLow = CTRRanges_mean[ch]-3.*CTRRanges_sigma[ch];
-    float timeHig = CTRRanges_mean[ch]+3.*CTRRanges_sigma[ch];
+    float timeLow = CTRRanges_mean[ch]-2.5*CTRRanges_sigma[ch];
+    float timeHig = CTRRanges_mean[ch]+1.5*CTRRanges_sigma[ch];
     
     TLine* line_xtalXLow = new TLine(0.5*(xtalXMin+xtalXMax)-1.5,xtalYMin,0.5*(xtalXMin+xtalXMax)-1.5,xtalYMax);
     line_xtalXLow -> SetLineStyle(2);
@@ -1414,13 +1478,13 @@ int main(int argc, char** argv)
     c = new TCanvas(Form("c_CTR_distRTCorr_%s",shortLabel.c_str()),Form("c_CTR_distRTCorr_%s",shortLabel.c_str()));
     
     histo = h_CTR[ch];
-    histoCorr = h_CTR_ampCorr[ch];
+    histoCorr = h_CTR_RTCorr[ch];
     histoCorr2 = h_CTR_distRTCorr[ch];
     
     if( intrinsic < 0 )
-      ctrResults = drawCTRPlot(histoCorr2,"amp. walk & r.t. corr.",rebin,false,false,-1.,Form(";#Deltat [ns]"),latexLabel12,histoCorr,"amp. corr",histo,"raw");
+      ctrResults = drawCTRPlot(histoCorr2,"amp. walk & r.t. corr.",rebin,false,false,-1.,Form(";#Deltat [ns]"),latexLabel12,histoCorr,"r.t. corr",histo,"raw");
     else
-      ctrResults = drawCTRPlot(histoCorr2,"amp. walk & r.t. corr.",rebin,false,true,intrinsic,Form(";#Deltat [ns]"),latexLabel12,histoCorr,"amp. corr",histo,"raw");
+      ctrResults = drawCTRPlot(histoCorr2,"amp. walk & r.t. corr.",rebin,false,true,intrinsic,Form(";#Deltat [ns]"),latexLabel12,histoCorr,"r.t. corr",histo,"raw");
     t_CTR_distRTCorr_effSigma[ch] = ctrResults.effSigma;
     t_CTR_distRTCorr_gausSigma[ch] = ctrResults.gausSigma;
     t_CTR_distRTCorr_gausSigmaErr[ch] = ctrResults.gausSigmaErr;
@@ -1443,6 +1507,8 @@ int main(int argc, char** argv)
     float xtalYMax = opts.GetOpt<float>(Form("%s.xtalYMax",ch.c_str()));
     float intrinsic = opts.GetOpt<float>(Form("%s.intrinsic",ch.c_str()));
     
+    if( nBinsX <= 0 || nBinsY <= 0 ) continue;
+    
     TH2F* h2_CTR_ampCorr_chess = new TH2F(Form("h2_CTR_ampCorr_chess_%s",ch.c_str()),"",nBinsX,xtalXMin,xtalXMax,nBinsY,xtalYMin,xtalYMax);
     
     for(int binX = 0; binX < nBinsX; ++binX)
@@ -1462,7 +1528,7 @@ int main(int argc, char** argv)
       }
     
     c = new TCanvas();
-    DrawHistogram2D(opts,ch,h2_CTR_ampCorr_chess,";hodoscope x[mm];hodoscope y [mm];time resolution [ps]",xtalXMin,xtalXMax,xtalYMin,xtalYMax,20.,70.,false,false,"colz,text",latexLabels[ch]);
+    DrawHistogram2D(opts,ch,h2_CTR_ampCorr_chess,";hodoscope x[mm];hodoscope y [mm];time resolution [ps]",xtalXMin,xtalXMax,xtalYMin,xtalYMax,30.,70.,false,false,"colz,text",latexLabels[ch]);
     PrintCanvas(c,opts,ch,plotDir,"4_tRes_chess_ampCorr");
     delete c;    
   }
