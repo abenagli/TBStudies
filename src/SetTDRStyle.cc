@@ -84,7 +84,7 @@ void setTDRStyle() {
   tdrStyle->SetPadTopMargin(0.06);
   tdrStyle->SetPadBottomMargin(0.13);
   tdrStyle->SetPadLeftMargin(0.16);
-  tdrStyle->SetPadRightMargin(0.16);
+  tdrStyle->SetPadRightMargin(0.20);
 
 // For the Global title:
 
@@ -151,7 +151,7 @@ void setTDRStyle() {
   tdrStyle->SetHatchesLineWidth(5);
   tdrStyle->SetHatchesSpacing(0.05);
   
-  tdrStyle->SetPaintTextFormat("%.1f");
+  tdrStyle->SetPaintTextFormat(".1f");
   
   tdrStyle->cd();
 }

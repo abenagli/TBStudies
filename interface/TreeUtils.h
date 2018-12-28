@@ -1,6 +1,7 @@
 #include "CfgManager/interface/CfgManager.h"
 #include "CfgManager/interface/CfgManagerT.h"
 
+#include "interface/TrackTree.h"
 #include <iostream>
 
 #include "TTree.h"
@@ -22,6 +23,9 @@ struct TreeVars
   float* hodoY;
   float* wireX;
   float* wireY;
+  
+  int nTracks;
+  std::vector<TrackPar>* tracks = 0;
   
   std::map<std::string,int> channelIds;
   std::map<std::string,int> timeMethodIds;

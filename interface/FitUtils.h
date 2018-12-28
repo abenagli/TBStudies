@@ -41,7 +41,15 @@ void DrawHistogram(CfgManager& opts,
                    const std::string& ch, TH1F* histo,
                    const std::string& title,
                    const float& xMin, const float& xMax, const int& rebin, const bool& logy,
-                   TLatex* latexLabel, std::vector<TLine*>* lines = NULL);
+                   TLatex* latexLabel, std::vector<TLine*>* lines = NULL,
+                   const bool& landauFit = false, const float& fitXMin = 0., const float& fitXMax = 0.);
+
+void DrawHistogram(CfgManager& opts,
+                   const std::string& ch, std::vector<TH1F*>& histos,
+                   const std::string& title,
+                   const float& xMin, const float& xMax, const int& rebin, const bool& logy,
+                   TLatex* latexLabel, std::vector<TLine*>* lines = NULL,
+                   const bool& landauFit = false, const float& fitXMin = 0., const float& fitXMax = 0.);
 
 /*** draw 2D histogram ***/
 void DrawHistogram2D(CfgManager& opts,
@@ -57,7 +65,7 @@ void DrawProfile(CfgManager& opts,
                  const std::string& title,
                  const float& xMin, const float& xMax, const float& yMin, const float& yMax,
                  const int& color, const std::string& drawOpt,
-                 TLatex* latexLabel = NULL, TF1* func = NULL);
+                 TLatex* latexLabel = NULL, TF1* func = NULL, const float& x0 = -999);
 
 /*** draw 2D profile ***/
 void DrawProfile2D(CfgManager& opts,

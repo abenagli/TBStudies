@@ -264,7 +264,7 @@ void DrawHistogram(CfgManager& opts,
                    const std::string& ch, TH1F* histo,
                    const std::string& title,
                    const float& xMin, const float& xMax, const int& rebin, const bool& logy,
-                   TLatex* latexLabel, std::vector<TLine*>* lines)
+                   TLatex* latexLabel, std::vector<TLine*>* lines, const bool& landauFit, const float& fitXMin, const float& fitXMax)
 {
   std::string shortLabel = opts.GetOpt<std::string>(Form("%s.shortLabel",ch.c_str()));
   
@@ -290,7 +290,82 @@ void DrawHistogram(CfgManager& opts,
       lines->at(ii) -> Draw("same");
     }
   }
+  
+  if( landauFit )
+  {
+    TF1* fitFunc_landau = new TF1(Form("fitFunc_landau_%s",histo->GetName()),"[0]*TMath::Landau(x,[1],[2])",fitXMin,fitXMax);
+    fitFunc_landau -> SetParameters(0.01,histo->GetMean(),0.1);
+    histo -> Fit(fitFunc_landau,"QNRS+");
+    fitFunc_landau -> SetLineColor(kRed+2);
+    fitFunc_landau -> SetLineWidth(2);
+    fitFunc_landau -> Draw("same");
+    
+    TLatex* latexLandau = new TLatex(0.25,0.80,Form("Landau fit MPV: %.2f V",fitFunc_landau->GetParameter(1)));
+    latexLandau -> SetNDC();
+    latexLandau -> SetTextFont(42);
+    latexLandau -> SetTextSize(0.04);
+    latexLandau -> SetTextColor(kRed+2);
+    latexLandau -> Draw("same");    
+  }
+  
+  gPad -> Update();
+}
 
+
+
+void DrawHistogram(CfgManager& opts,
+                   const std::string& ch, std::vector<TH1F*>& histos,
+                   const std::string& title,
+                   const float& xMin, const float& xMax, const int& rebin, const bool& logy,
+                   TLatex* latexLabel, std::vector<TLine*>* lines, const bool& landauFit, const float& fitXMin, const float& fitXMax)
+{
+  std::string shortLabel = opts.GetOpt<std::string>(Form("%s.shortLabel",ch.c_str()));
+  
+  gPad -> SetGridx();
+  if( logy ) gPad -> SetLogy();
+  
+  for(unsigned int ii = 0; ii < histos.size(); ++ii)
+  {
+    TH1F* histo = histos.at(ii);
+    histo -> SetTitle(title.c_str());
+    histo -> Rebin(rebin);
+    histo -> SetLineColor(1+ii);
+    histo -> SetFillColor(1+ii);
+    histo -> SetFillStyle(3003);
+    histo -> GetXaxis() -> SetRangeUser(xMin,xMax);
+    if( ii == 0 ) histo -> Draw("hist");
+    else          histo -> Draw("hist,same");
+  }
+  
+  if( latexLabel != NULL ) latexLabel -> Draw("same");
+
+  if( lines != NULL )
+  {
+    for(unsigned int ii = 0; ii < lines->size(); ++ii)
+    {
+      lines->at(ii) -> SetLineStyle(2);
+      lines->at(ii) -> SetLineWidth(3);
+      lines->at(ii) -> Draw("same");
+    }
+  }
+  
+  if( landauFit )
+  {
+    TF1* fitFunc_landau = new TF1(Form("fitFunc_landau_%s",histos.at(histos.size()-1)->GetName()),"[0]*TMath::Landau(x,[1],[2])",fitXMin,fitXMax);
+    fitFunc_landau -> SetParameters(0.01,histos.at(histos.size()-1)->GetMean(),0.1);
+    histos.at(histos.size()-1) -> Fit(fitFunc_landau,"QNRS+");
+    fitFunc_landau -> SetLineColor(1+histos.size()-1);
+    fitFunc_landau -> SetLineWidth(1+histos.size()-1);
+    fitFunc_landau -> Draw("same");
+    
+    TLatex* latexLandau = new TLatex(0.25,0.80,Form("Landau fit MPV: %.2f V",fitFunc_landau->GetParameter(1)));
+    latexLandau -> SetNDC();
+    latexLandau -> SetTextFont(42);
+    latexLandau -> SetTextSize(0.04);
+    latexLandau -> SetTextColor(1+histos.size()-1);
+    latexLandau -> Draw("same");    
+  }
+  
   gPad -> Update();
 }
 
@@ -352,7 +427,7 @@ void DrawProfile(CfgManager& opts,
                  const std::string& title,
                  const float& xMin, const float& xMax, const float& yMin, const float& yMax,
                  const int& color, const std::string& drawOpt,
-                 TLatex* latexLabel, TF1* func)
+                 TLatex* latexLabel, TF1* func, const float& x0)
 {
   std::string shortLabel = opts.GetOpt<std::string>(Form("%s.shortLabel",ch.c_str()));
   
@@ -361,12 +436,34 @@ void DrawProfile(CfgManager& opts,
   prof -> SetTitle(title.c_str());
   prof -> SetMarkerColor(color);
   prof -> SetLineColor(color);
-  prof -> SetMarkerSize(0.3);
+  prof -> SetMarkerSize(0.5);
   prof -> GetXaxis() -> SetRangeUser(xMin,xMax);
   prof -> SetMinimum(yMin);
   prof -> SetMaximum(yMax);
   prof -> Draw(drawOpt.c_str());
-
+  
+  TH1F* h_spread = new TH1F("h_spread","",100,yMin,yMax);
+  for(int ii = 1; ii <= prof->GetNbinsX(); ++ii)
+  {
+    float val = prof -> GetBinContent(ii);
+    h_spread -> Fill(val);
+  }
+  float y = 0.86;
+  if( drawOpt == "same" ) y = 0.76;
+  TLatex* latex_mean = new TLatex(0.19,y,Form("mean = %.1e",h_spread->GetMean()));  
+  latex_mean -> SetNDC();
+  latex_mean -> SetTextFont(42);
+  latex_mean -> SetTextColor(color);
+  latex_mean -> SetTextSize(0.04);
+  latex_mean -> Draw("same");
+  TLatex* latex_rms = new TLatex(0.19,y-0.05,Form("rms = %.2e",h_spread->GetRMS()));
+  latex_rms -> Draw("same");
+  latex_rms -> SetNDC();
+  latex_rms -> SetTextFont(42);
+  latex_rms -> SetTextColor(color);
+  latex_rms -> SetTextSize(0.04);
+  delete h_spread;
+  
   if( latexLabel != NULL ) latexLabel -> Draw("same");
   
   if( func != NULL )
@@ -375,6 +472,23 @@ void DrawProfile(CfgManager& opts,
     func -> SetLineWidth(2);
     func -> SetLineColor(kRed);
     func -> Draw("same");
+    
+    if( x0 != -999. )
+    {
+      TF1* f_deriv = new TF1("f_deriv","[0]+[1]*(x-[2])",xMin,xMax);
+      f_deriv -> SetParameters(func->Eval(x0),func->Derivative(x0),x0);
+      f_deriv -> SetLineColor(kBlue);
+      f_deriv -> SetLineWidth(2);
+      f_deriv -> SetLineStyle(7);
+      f_deriv -> Draw("same");
+      
+      TLatex* latex_deriv = new TLatex(0.19,y-0.10,Form("#Deltaf/#Deltax = %.0f ps/V ",f_deriv->GetParameter(1)*1000.));  
+      latex_deriv -> SetNDC();
+      latex_deriv -> SetTextFont(42);
+      latex_deriv -> SetTextColor(kBlue);
+      latex_deriv -> SetTextSize(0.04);
+      latex_deriv -> Draw("same");
+    }
   }
   
   gPad -> Update();

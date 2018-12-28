@@ -12,6 +12,8 @@ void InitTreeVars(TTree* tree, TreeVars& treeVars, CfgManager& opts)
   treeVars.hodoY = new float[2];
   treeVars.wireX = new float[2];
   treeVars.wireY = new float[2];
+  
+  treeVars.tracks = new std::vector<TrackPar>;
 
   tree -> SetBranchAddress("event",&treeVars.event);
   tree -> SetBranchAddress("spill",&treeVars.spill);
@@ -19,13 +21,15 @@ void InitTreeVars(TTree* tree, TreeVars& treeVars, CfgManager& opts)
   
   tree -> SetBranchAddress("time",   treeVars.time);
   tree -> SetBranchAddress("amp_max",treeVars.amp_max);
-  tree -> SetBranchAddress("hodo.nFibresOnX",treeVars.nFibresOnX);
-  tree -> SetBranchAddress("hodo.nFibresOnY",treeVars.nFibresOnY);
-  tree -> SetBranchAddress("hodo.X",treeVars.hodoX);
-  tree -> SetBranchAddress("hodo.Y",treeVars.hodoY);
+  // tree -> SetBranchAddress("hodo.nFibresOnX",treeVars.nFibresOnX);
+  // tree -> SetBranchAddress("hodo.nFibresOnY",treeVars.nFibresOnY);
+  // tree -> SetBranchAddress("hodo.X",treeVars.hodoX);
+  // tree -> SetBranchAddress("hodo.Y",treeVars.hodoY);
   // tree -> SetBranchAddress("wire.X",wireX);
   // tree -> SetBranchAddress("wire.Y",wireY);
-
+  tree -> SetBranchAddress("n_tracks",  &treeVars.nTracks);
+  tree -> SetBranchAddress("fitResult", &treeVars.tracks);
+  
   if( opts.OptExist("Input.tableX0") ) tree -> SetBranchAddress("tableX",&treeVars.tableX);
   if( opts.OptExist("Input.tableY0") ) tree -> SetBranchAddress("tableY",&treeVars.tableY);
   
@@ -44,9 +48,11 @@ void InitTreeVars(TTree* tree, TreeVars& treeVars, CfgManager& opts)
     
     std::string Vbias = opts.OptExist(Form("%s.Vbias", ch.c_str())) ? opts.GetOpt<std::string>(Form("%s.Vbias", ch.c_str())) : "NULL";
     if( Vbias != "NULL" ) tree -> SetBranchAddress(Vbias.c_str(), &treeVars.VbiasVals[Vbias]);
+    else treeVars.VbiasVals[Vbias] = -1.;
     
     std::string NINOthr = opts.OptExist(Form("%s.NINOthr", ch.c_str())) ? opts.GetOpt<std::string>(Form("%s.NINOthr", ch.c_str())) : "NULL";
     if( NINOthr != "NULL" ) tree -> SetBranchAddress(NINOthr.c_str(), &treeVars.NINOthrVals[NINOthr]);
+    else treeVars.NINOthrVals[NINOthr] = -1.;
   }
 }
 
@@ -115,10 +121,15 @@ void ReconstructHodoPosition(TreeVars& tv, CfgManager& opts, const std::string& 
   }
   else
   {
-    tv.beamX = tv.hodoX[plane];
-    tv.beamY = tv.hodoY[plane];
+    // tv.beamX = tv.hodoX[plane];
+    // tv.beamY = tv.hodoY[plane];
+    if( tv.tracks->size() >= 1 )
+    {
+      tv.beamX = (tv.tracks->at(0)).x();
+      tv.beamY = (tv.tracks->at(0)).y();
+    }
   }
-
+  
   if( tv.run == 12426 ) tv.tableX = 42.;
   if( opts.OptExist("Input.tableX0") ) tv.beamX = (tv.tableX-opts.GetOpt<float>("Input.tableX0")) - tv.beamX;
   if( opts.OptExist("Input.tableY0") ) tv.beamY = (tv.tableY-opts.GetOpt<float>("Input.tableY0")) + tv.beamY;
@@ -149,11 +160,13 @@ bool AcceptEvent(AnalysisVars& av,
     
     if( tv.NINOthrVals[NINOthr] < NINOthrMin || tv.NINOthrVals[NINOthr] > NINOthrMax) return false;
   }
-
   
-  if( (tv.nFibresOnX[0] < nFibresMin || tv.nFibresOnX[0] > nFibresMax) ) return false;
+  
+  if( tv.nTracks != 1 ) return false;
+  
+  // if( (tv.nFibresOnX[0] < nFibresMin || tv.nFibresOnX[0] > nFibresMax) ) return false;
   // if( (tv.nFibresOnX[1] < nFibresMin || tv.nFibresOnX[1] > nFibresMax) ) return false;
-  if( (tv.nFibresOnY[0] < nFibresMin || tv.nFibresOnY[0] > nFibresMax) ) return false;
+  // if( (tv.nFibresOnY[0] < nFibresMin || tv.nFibresOnY[0] > nFibresMax) ) return false;
   // if( (tv.nFibresOnY[1] < nFibresMin || tv.nFibresOnY[1] > nFibresMax) ) return false;
   
   float xtalXMin = opts.GetOpt<float>(Form("%s.xtalXMin",ch.c_str()));
@@ -179,7 +192,7 @@ bool AcceptEvent(AnalysisVars& av,
   float rtMax = opts.GetOpt<float>(Form("%s.rtMax",ch.c_str()));
   
   if( ampCh == "NULL" ) return false;
-  float amp = tv.amp_max[tv.channelIds[ampCh]] / 1000.;
+  float amp = tv.amp_max[tv.channelIds[ampCh]] / 4096.;
   if( amp < ampMin || amp >= ampMax ) return false;
   if( isnan(amp) ) return false;
   
@@ -211,7 +224,7 @@ bool AcceptEvent(AnalysisVars& av,
   float rtMinRef = opts.GetOpt<float>(Form("%s.rtMin",refCh.c_str()));
   float rtMaxRef = opts.GetOpt<float>(Form("%s.rtMax",refCh.c_str()));
     
-  float ampRef = tv.amp_max[tv.channelIds[ampChRef]] / 1000.;
+  float ampRef = tv.amp_max[tv.channelIds[ampChRef]] / 4096.;
   if( ampRef < ampMinRef || ampRef >= ampMaxRef ) return false;
   if( isnan(ampRef) ) return false;
   
