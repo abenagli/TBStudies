@@ -61,7 +61,7 @@ int main(int argc, char** argv)
   if( crysLayout == 4 ) outFile = TFile::Open(Form("/Users/abenagli/Work/TIMING/TBStudies/plots/barzflat_channels.root"),  "RECREATE");
   outFile -> cd();
   
-  TProfile2D* p2_crystal = new TProfile2D("p2_crystal","",865,-0.5,864.5,577,-0.5,576.5);
+  TProfile2D* p2_crystal = new TProfile2D("p2_crystal","",865,-0.5,864.5,577,-288,287.5);
   TProfile2D* p2_crystal_foldIEta = new TProfile2D("p2_crystal_foldIEta","",16,-0.5,15.5,577,-0.5,576.5);
   TProfile2D* p2_crystal_foldIEtaIPhi = new TProfile2D("p2_crystal_foldIEtaIPhi","",16,-0.5,15.5,64,-0.5,63.5);
   

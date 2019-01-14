@@ -65,6 +65,8 @@ int main(int argc, char** argv)
     latexLabel = new TLatex(0.16,0.96,Form("11.5#times11.5 mm^{2} tiles -- %s",particleLabel2.c_str()));
   if( label == "barphi" )
     latexLabel = new TLatex(0.16,0.96,Form("3#times50 mm^{2} bars along #phi -- %s",particleLabel2.c_str()));
+  if( label == "barphiflat" )
+    latexLabel = new TLatex(0.16,0.96,Form("3.15#times57.6 mm^{2} bars along #phi -- %s",particleLabel2.c_str()));
   if( label == "barz" )
     latexLabel = new TLatex(0.16,0.96,Form("3#times50 mm^{2} bars along z -- %s",particleLabel2.c_str()));
   if( label == "barzflat" )
@@ -170,7 +172,7 @@ int main(int argc, char** argv)
   
   for(int iRU = 0; iRU < nRUs; ++iRU)
   {
-    g = (TGraph*)( inFile->Get(Form("g_simHits_PU200_occ_vs_energyCut_RU%d",iRU)) );
+    g = (TGraph*)( inFile->Get(Form("g_simHits_PU200_occ_vs_RU_energyCut_RU%d",iRU)) );
     g -> SetLineColor(colors[iRU]);
     g -> SetLineWidth(5);
     g -> SetLineStyle(1);
@@ -208,7 +210,7 @@ int main(int argc, char** argv)
   
   for(int iRU = 0; iRU < nRUs; ++iRU)
   {
-    g = (TGraph*)( inFile->Get(Form("g_recHits_PU200_occ_vs_energyCut_RU%d",iRU)) );
+    g = (TGraph*)( inFile->Get(Form("g_recHits_PU200_occ_vs_RU_energyCut_RU%d",iRU)) );
     g -> SetLineColor(colors[iRU]);
     g -> SetLineWidth(5);
     g -> SetLineStyle(1);
@@ -515,6 +517,20 @@ int main(int argc, char** argv)
   p -> SetLineColor(kBlue);
   p -> Draw("same");
   legend -> AddEntry(p,Form("sum of recHits"),"PL");
+
+  p = (TProfile*)( inFile->Get(Form("p1_matchedRecHit_timeRes_stat_vs_eta__totEnergy__pt%04.1f-%04.1f__Ethr%.1fMeV",0.8,ptRanges.at(ptRanges.size()-1),1.)) );
+  p -> SetMarkerSize(1.5);
+  p -> SetMarkerStyle(22);
+  p -> SetMarkerColor(kYellow-1);
+  p -> SetLineColor(kYellow-1);
+  p -> Draw("hist,same");
+
+  p = (TProfile*)( inFile->Get(Form("p1_matchedRecHit_timeRes_DCR_vs_eta__totEnergy__pt%04.1f-%04.1f__Ethr%.1fMeV",0.8,ptRanges.at(ptRanges.size()-1),1.)) );
+  p -> SetMarkerSize(1.5);
+  p -> SetMarkerStyle(22);
+  p -> SetMarkerColor(kRed+1);
+  p -> SetLineColor(kRed+1);
+  p -> Draw("hist,same");
   
   legend -> Draw("same");
   latexLabel -> Draw("same");
