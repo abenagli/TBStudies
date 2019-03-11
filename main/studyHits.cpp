@@ -25,6 +25,19 @@
 
 
 
+double myfunction(double* x, double* par)
+{
+  double xx = x[0];
+  int nPars = int(par[0]);
+
+  double ret = 0.;
+  for(int ii = 0; ii < nPars; ++ii)
+    ret += xx > par[1+2*ii] ? par[1+2*ii+1]/(43.-0.100)*(exp(-1.*(xx-par[1+2*ii+0])/43.)-exp(-1.*(xx-par[1+2*ii+0])/0.100)) : 0.;
+  return ret;
+}
+
+
+
 int main(int argc, char** argv)
 {
   setTDRStyle();
@@ -57,6 +70,19 @@ int main(int argc, char** argv)
   int nRUs = opts.GetOpt<int>("Input.nRUs");
   int nTrays = opts.GetOpt<int>("Input.nTrays");
   
+  std::string weightsFileName = opts.GetOpt<std::string>("Options.weightsFileName");
+  TFile* weightsFile = NULL;
+  TH1F* weightsMap_eta = NULL;
+  TH1F* weightsMap_pt = NULL;
+  TH2F* weightsMap_eta_pt = NULL;
+  if( weightsFileName != "NULL" )
+  {
+    weightsFile = TFile::Open(weightsFileName.c_str(),"READ");
+    weightsMap_eta = (TH1F*)( weightsFile->Get("h1_tracks_eta") );
+    weightsMap_pt  = (TH1F*)( weightsFile->Get("h1_tracks_pt") );
+    weightsMap_eta_pt = (TH2F*)( weightsFile->Get("h2_tracks_pt_vs_eta") );
+  }
+  
   std::vector<float> ptRanges = opts.GetOpt<std::vector<float> >("Options.ptRanges");
   float ptRangesMin;
   float ptRangesMax;
@@ -74,10 +100,16 @@ int main(int argc, char** argv)
   int nPhiBins = opts.GetOpt<int>("Options.nPhiBins");
   float phiMin = opts.GetOpt<float>("Options.phiMin");
   float phiMax = opts.GetOpt<float>("Options.phiMax");
-  
-  int nPtBins = opts.GetOpt<int>("Options.nPtBins");
-  float ptMin = opts.GetOpt<float>("Options.ptMin");
-  float ptMax = opts.GetOpt<float>("Options.ptMax");
+
+  std::vector<float> ptBins = opts.GetOpt<std::vector<float> >("Options.ptBins");
+  int nPtBins = ptBins.size() - 1.;
+  double* ptAxis = new double[ptBins.size()];
+  int ptIt = 0;
+  for(auto ptVal : ptBins)
+  {
+    ptAxis[ptIt] = ptVal;
+    ++ptIt;
+  }
   
   float sigma_clock = opts.GetOpt<float>("Options.sigma_clock");
   float sigma_digi  = opts.GetOpt<float>("Options.sigma_digi");
@@ -130,12 +162,12 @@ int main(int argc, char** argv)
   std::vector<int>* simHits_iphi = new std::vector<int>;  
   std::vector<int>* simHits_module = new std::vector<int>;
   std::vector<int>* simHits_modType = new std::vector<int>;
-  std::vector<float>* simHits_entry_local_x = new std::vector<float>;
-  std::vector<float>* simHits_entry_local_y = new std::vector<float>;
-  std::vector<float>* simHits_entry_local_z = new std::vector<float>;
-  std::vector<float>* simHits_exit_local_x = new std::vector<float>;
-  std::vector<float>* simHits_exit_local_y = new std::vector<float>;
-  std::vector<float>* simHits_exit_local_z = new std::vector<float>;
+  // std::vector<float>* simHits_entry_local_x = new std::vector<float>;
+  // std::vector<float>* simHits_entry_local_y = new std::vector<float>;
+  // std::vector<float>* simHits_entry_local_z = new std::vector<float>;
+  // std::vector<float>* simHits_exit_local_x = new std::vector<float>;
+  // std::vector<float>* simHits_exit_local_y = new std::vector<float>;
+  // std::vector<float>* simHits_exit_local_z = new std::vector<float>;
   tree -> SetBranchStatus("simHits_det",1);       tree -> SetBranchAddress("simHits_det",       &simHits_det);
   tree -> SetBranchStatus("simHits_time",1);      tree -> SetBranchAddress("simHits_time",      &simHits_time);
   tree -> SetBranchStatus("simHits_energy",1);    tree -> SetBranchAddress("simHits_energy",    &simHits_energy);
@@ -189,6 +221,8 @@ int main(int argc, char** argv)
   std::vector<std::vector<float> >* matchedRecHits_track_DR = new std::vector<std::vector<float> >;
   std::vector<std::vector<float> >* matchedRecHits_track_dist = new std::vector<std::vector<float> >;
   std::vector<std::vector<int> >*   matchedRecHits_modType = new std::vector<std::vector<int> >;
+  std::vector<std::vector<int> >*   matchedRecHits_ieta = new std::vector<std::vector<int> >;
+  std::vector<std::vector<int> >*   matchedRecHits_iphi = new std::vector<std::vector<int> >;
   tree -> SetBranchStatus("matchedRecHits_det",1);        tree -> SetBranchAddress("matchedRecHits_det",        &matchedRecHits_det);
   tree -> SetBranchStatus("matchedRecHits_time",1);       tree -> SetBranchAddress("matchedRecHits_time",       &matchedRecHits_time);
   tree -> SetBranchStatus("matchedRecHits_energy",1);     tree -> SetBranchAddress("matchedRecHits_energy",     &matchedRecHits_energy);
@@ -196,6 +230,8 @@ int main(int argc, char** argv)
   tree -> SetBranchStatus("matchedRecHits_track_DR",1);   tree -> SetBranchAddress("matchedRecHits_track_DR",   &matchedRecHits_track_DR);
   tree -> SetBranchStatus("matchedRecHits_track_dist",1); tree -> SetBranchAddress("matchedRecHits_track_dist", &matchedRecHits_track_dist);
   tree -> SetBranchStatus("matchedRecHits_modType",1);    tree -> SetBranchAddress("matchedRecHits_modType",    &matchedRecHits_modType);
+  tree -> SetBranchStatus("matchedRecHits_ieta",1);       tree -> SetBranchAddress("matchedRecHits_ieta",       &matchedRecHits_ieta);
+  tree -> SetBranchStatus("matchedRecHits_iphi",1);       tree -> SetBranchAddress("matchedRecHits_iphi",       &matchedRecHits_iphi);
   
   
   
@@ -204,15 +240,17 @@ int main(int argc, char** argv)
   outFile -> cd();  
   
   TH1F* h1_tracks_n = new TH1F("h1_tracks_n","",250,-0.5,249.5);
-  TH1F* h1_tracks_pt = new TH1F("h1_tracks_pt","",500,0.,20.);
-  TH1F* h1_tracks_eta = new TH1F("h1_tracks_eta","",nEtaBins,etaMin,etaMax);
   TH1F* h1_tracks_phi = new TH1F("h1_tracks_phi","",nPhiBins,phiMin,phiMax);
   TH1F* h1_tracks_eta_atBTL = new TH1F("h1_tracks_eta_atBTL","",nEtaBins,etaMin,etaMax);
   TH1F* h1_tracks_phi_atBTL = new TH1F("h1_tracks_phi_atBTL","",nPhiBins,phiMin,phiMax);
+
+  TH1F* h1_tracks_pt = new TH1F("h1_tracks_pt","",nPtBins,ptAxis);
+  TH1F* h1_tracks_eta = new TH1F("h1_tracks_eta","",nEtaBins/2,etaMin,etaMax);
+  TH2F* h2_tracks_pt_vs_eta = new TH2F("h2_tracks_pt_vs_eta","",nEtaBins/2,etaMin,etaMax,nPtBins,ptAxis);
   
   TH1F* h1_simHits_energy = new TH1F("h1_simHit_energy","",1000,0.,100.);
   TH1F* h1_simHits_time = new TH1F("h1_simHit_time","",500,-10.,40.);
-
+  
   std::map<std::pair<int,int>,TH1F*> h1_simHit_time_perChannel;
   std::map<std::pair<int,int>,TH1F*> h1_simHit_timeRMS_perChannel;
   
@@ -221,19 +259,17 @@ int main(int argc, char** argv)
   std::map<std::pair<float,float>,std::map<std::pair<float,float>,TH1F*> > h1_matchedSimHit_track_RDphi_pt_eta;
   std::map<std::pair<float,float>,std::map<std::pair<float,float>,TH1F*> > h1_matchedSimHit_track_Dz_pt_eta;
   
+  TH1F* h1_matchedSimHit_energySum__ptWei = new TH1F("h1_matchedSimHit_energySum__ptWei","",5000,0.,100.);
+  TH1F* h1_matchedSimHit_energySum__ptHig = new TH1F("h1_matchedSimHit_energySum__ptHig","",5000,0.,100.);  
+  TH1F* h1_matchedSimHit_energySum__ieta1__ptWei = new TH1F("h1_matchedSimHit_energySum__ieta1__ptWei","",5000,0.,100.);
+  TH1F* h1_matchedSimHit_energySum__ieta1__ptHig = new TH1F("h1_matchedSimHit_energySum__ieta1__ptHig","",5000,0.,100.);
+  
   std::map<float,std::map<std::pair<float,float>,TProfile*> > p1_matchedSimHit_totEnergy_vs_local_x_pt;
   std::map<float,std::map<std::pair<float,float>,TProfile*> > p1_matchedSimHit_totEnergy_vs_local_y_pt;
   std::map<float,std::map<std::pair<float,float>,TProfile*> > p1_matchedSimHit_maxEnergy_vs_local_x_pt;
   std::map<float,std::map<std::pair<float,float>,TProfile*> > p1_matchedSimHit_maxEnergy_vs_local_y_pt;
   std::map<float,std::map<std::pair<float,float>,TProfile*> > p1_matchedSimHit_maxOverTotEnergy_vs_local_x_pt;
   std::map<float,std::map<std::pair<float,float>,TProfile*> > p1_matchedSimHit_maxOverTotEnergy_vs_local_y_pt;
-  
-  std::map<float,std::map<std::pair<float,float>,TProfile*> > p1_matchedSimHit_timeRes_vs_local_x_totEnergy;
-  std::map<float,std::map<std::pair<float,float>,TProfile*> > p1_matchedSimHit_timeRes_vs_local_x_maxEnergy;
-  std::map<float,std::map<std::pair<float,float>,TProfile*> > p1_matchedSimHit_timeRes_vs_local_x_sumEnergy;
-  std::map<float,std::map<std::pair<float,float>,TProfile*> > p1_matchedSimHit_timeRes_vs_local_y_totEnergy;
-  std::map<float,std::map<std::pair<float,float>,TProfile*> > p1_matchedSimHit_timeRes_vs_local_y_maxEnergy;
-  std::map<float,std::map<std::pair<float,float>,TProfile*> > p1_matchedSimHit_timeRes_vs_local_y_sumEnergy;
   
   for(unsigned int ii = 0; ii < ptRanges.size()-1; ++ii)
   {
@@ -284,17 +320,29 @@ int main(int argc, char** argv)
   std::map<float,std::map<int,int> > simHits_n_vs_RU_energyCut;
   std::map<float,std::map<int,int> > simHits_n_vs_ieta_energyCut;
   std::map<float,std::map<int,int> > recHits_n_vs_RU_energyCut;
+
+  int nOOT = opts.GetOpt<int>("Input.nOOT");
+  int nPU = opts.GetOpt<int>("Input.nPU");
+  std::map<std::pair<std::pair<int,int>,int>,std::vector<float> > simHits_OOT_times;
+  std::map<std::pair<std::pair<int,int>,int>,std::vector<float> > simHits_OOT_energies;
+  std::map<float,std::map<int,int> > simHits_OOT_n_vs_RU_energyCut;  
+  
   
   TH1F* h1_recHits_energy = new TH1F("h1_recHit_energy","",1000,0.,100.);
   TH1F* h1_recHits_time = new TH1F("h1_recHit_time","",500,-10.,40.);
   
-  TH1F* h1_matchedRecHit_energySumCorr = new TH1F("h1_matchedRecHit_energySumCorr","",1000,0.,100.);
-  TH1F* h1_matchedRecHit_energySum = new TH1F("h1_matchedRecHit_energySum","",1000,0.,100.);
-  TH1F* h1_matchedRecHit_energy = new TH1F("h1_matchedRecHit_energy","",1000,0.,100.);
+  TH1F* h1_matchedRecHit_energySumCorr = new TH1F("h1_matchedRecHit_energySumCorr","",5000,0.,100.);
+  TH1F* h1_matchedRecHit_energySum = new TH1F("h1_matchedRecHit_energySum","",5000,0.,100.);
+  TH1F* h1_matchedRecHit_energy = new TH1F("h1_matchedRecHit_energy","",5000,0.,100.);
   TH1F* h1_matchedRecHit_time = new TH1F("h1_matchedRecHit_time","",500,-10.,40.);
   TH1F* h1_matchedRecHit_track_DR = new TH1F("h1_matchedRecHit_track_DR","",10000,0.,10.);
   TH1F* h1_matchedRecHit_track_dist = new TH1F("h1_matchedRecHit_track_dist","",10000,0.,1000.);
 
+  TH1F* h1_matchedRecHit_energySum__ptWei = new TH1F("h1_matchedRecHit_energySum__ptWei","",5000,0.,100.);
+  TH1F* h1_matchedRecHit_energySum__ptHig = new TH1F("h1_matchedRecHit_energySum__ptHig","",5000,0.,100.);  
+  TH1F* h1_matchedRecHit_energySum__ieta1__ptWei = new TH1F("h1_matchedRecHit_energySum__ieta1__ptWei","",5000,0.,100.);
+  TH1F* h1_matchedRecHit_energySum__ieta1__ptHig = new TH1F("h1_matchedRecHit_energySum__ieta1__ptHig","",5000,0.,100.);
+  
   TProfile* p1_matchedRecHit_time_vs_eta = new TProfile("p1_matchedRecHit_time_vs_eta","",nEtaBins,etaMin,etaMax);
   
   TH1F* h1_nEntries_ptRanges = new TH1F("h1_nEntries_ptRanges","",ptRanges.size()-1,ptRanges.data());
@@ -328,19 +376,19 @@ int main(int argc, char** argv)
   std::map<float,std::map<std::pair<float,float>,TProfile*> >    p1_matchedRecHit_n_vs_phi;
   std::map<float,std::map<std::pair<float,float>,TProfile*> >    p1_matchedRecHit_totEnergy_vs_phi;
   std::map<float,std::map<std::pair<float,float>,TProfile*> >    p1_matchedRecHit_avgEnergy_vs_phi;
-
+  
   std::map<float,TEfficiency*> p1_matchedRecHit_eff_vs_pt;
   
   for(auto Ethr : EthrVals)
   {
-    p1_matchedRecHit_eff_vs_pt[Ethr] = new TEfficiency(Form("p1_matchedRecHit_eff_vs_pt__Ethr%.1fMeV",Ethr),"",nPtBins,ptMin,ptMax);
+    p1_matchedRecHit_eff_vs_pt[Ethr] = new TEfficiency(Form("p1_matchedRecHit_eff_vs_pt__Ethr%.1fMeV",Ethr),"",nPtBins,ptAxis);
     
     for(unsigned int ii = 0; ii < ptRanges.size()-1; ++ii)
     {
       ptRangesMin = ptRanges.at(ii);
       ptRangesMax = ptRanges.at(ii+1);
       
-      h1_matchedRecHit_totEnergy[Ethr][std::make_pair(ptRangesMin,ptRangesMax)] = new TH1F(Form("h1_matchedRecHit_totEnergy__pt%04.1f-%04.1f__Ethr%.1fMeV",ptRangesMin,ptRangesMax,Ethr),"",1000.,0.,500.);
+      h1_matchedRecHit_totEnergy[Ethr][std::make_pair(ptRangesMin,ptRangesMax)] = new TH1F(Form("h1_matchedRecHit_totEnergy__pt%04.1f-%04.1f__Ethr%.1fMeV",ptRangesMin,ptRangesMax,Ethr),"",5000.,0.,500.);
       
       p1_matchedRecHit_eff_vs_eta[Ethr][std::make_pair(ptRangesMin,ptRangesMax)] = new TEfficiency(Form("p1_matchedRecHit_eff_vs_eta__pt%04.1f-%04.1f__Ethr%.1fMeV",ptRangesMin,ptRangesMax,Ethr),"",nEtaBins,etaMin,etaMax);
       p1_matchedRecHit_n_vs_eta[Ethr][std::make_pair(ptRangesMin,ptRangesMax)] = new TProfile(Form("p1_matchedRecHit_n_vs_eta__pt%04.1f-%04.1f__Ethr%.1fMeV",ptRangesMin,ptRangesMax,Ethr),"",nEtaBins,etaMin,etaMax);
@@ -364,7 +412,7 @@ int main(int argc, char** argv)
     ptRangesMin = 0.8;
     ptRangesMax = ptRanges.at(ptRanges.size()-1);
 
-    h1_matchedRecHit_totEnergy[Ethr][std::make_pair(ptRangesMin,ptRangesMax)] = new TH1F(Form("h1_matchedRecHit_totEnergy__pt%04.1f-%04.1f__Ethr%.1fMeV",ptRangesMin,ptRangesMax,Ethr),"",1000.,0.,500.);
+    h1_matchedRecHit_totEnergy[Ethr][std::make_pair(ptRangesMin,ptRangesMax)] = new TH1F(Form("h1_matchedRecHit_totEnergy__pt%04.1f-%04.1f__Ethr%.1fMeV",ptRangesMin,ptRangesMax,Ethr),"",5000.,0.,500.);
       
     p1_matchedRecHit_eff_vs_eta[Ethr][std::make_pair(ptRangesMin,ptRangesMax)] = new TEfficiency(Form("p1_matchedRecHit_eff_vs_eta__pt%04.1f-%04.1f__Ethr%.1fMeV",ptRangesMin,ptRangesMax,Ethr),"",nEtaBins,etaMin,etaMax);
     p1_matchedRecHit_n_vs_eta[Ethr][std::make_pair(ptRangesMin,ptRangesMax)] = new TProfile(Form("p1_matchedRecHit_n_vs_eta__pt%04.1f-%04.1f__Ethr%.1fMeV",ptRangesMin,ptRangesMax,Ethr),"",nEtaBins,etaMin,etaMax);
@@ -384,38 +432,92 @@ int main(int argc, char** argv)
     p1_matchedRecHit_totEnergy_vs_phi[Ethr][std::make_pair(ptRangesMin,ptRangesMax)] = new TProfile(Form("p1_matchedRecHit_totEnergy_vs_phi__pt%04.1f-%04.1f__Ethr%.1fMeV",ptRangesMin,ptRangesMax,Ethr),"",nPhiBins,phiMin,phiMax);
     p1_matchedRecHit_avgEnergy_vs_phi[Ethr][std::make_pair(ptRangesMin,ptRangesMax)] = new TProfile(Form("p1_matchedRecHit_avgEnergy_vs_phi__pt%04.1f-%04.1f__Ethr%.1fMeV",ptRangesMin,ptRangesMax,Ethr),"",nPhiBins,phiMin,phiMax);
   }
+
+
+  
+  std::map<float,std::map<std::pair<float,float>,TH1F*> > h1_matchedRecHit_timeMax;
+  std::map<float,std::map<std::pair<float,float>,TH1F*> > h1_matchedRecHit_timeSum;
+  std::map<float,std::map<std::pair<float,float>,TH1F*> > h1_matchedRecHit_timeSum_energyWeighted;  
+  
+  for(auto Ethr : EthrVals)
+  {
+    for(unsigned int ii = 0; ii < etaRanges.size()-1; ++ii)
+    {
+      etaRangesMin = etaRanges.at(ii);
+      etaRangesMax = etaRanges.at(ii+1);
+      
+      h1_matchedRecHit_timeMax[Ethr][std::make_pair(etaRangesMin,etaRangesMax)] = new TH1F(Form("h1_matchedRecHit_timeMax__eta%.2f-%.2f__Ethr%.1fMeV",etaRangesMin,etaRangesMax,Ethr),"",25000,-25.,25.);
+      h1_matchedRecHit_timeSum[Ethr][std::make_pair(etaRangesMin,etaRangesMax)] = new TH1F(Form("h1_matchedRecHit_timeSum__eta%.2f-%.2f__Ethr%.1fMeV",etaRangesMin,etaRangesMax,Ethr),"",25000,-25.,25.);
+      h1_matchedRecHit_timeSum_energyWeighted[Ethr][std::make_pair(etaRangesMin,etaRangesMax)] = new TH1F(Form("h1_matchedRecHit_timeSum_energyWeighted__eta%.2f-%.2f__Ethr%.1fMeV",etaRangesMin,etaRangesMax,Ethr),"",25000,-25.,25.);
+    }
+  }
   
   
+  
+  
+
   
   //--- loop over events
+  int nEntries_OOT = 0;
   int nEntries = tree->GetEntries();
   // nEntries = 10000;
   for(int entry = 0; entry < nEntries; ++entry)
   {
-    if( entry%100 == 0 ) std::cout << ">>> reading entry " << entry << " / " << nEntries << "\r" << std::flush;
+    if( entry%1 == 0 ) std::cout << ">>> reading entry " << entry << " / " << nEntries << "\r" << std::flush;
     
     tree -> GetEntry(entry);
     
-
     
+    
+    if( entry%(nOOT*nPU) == 0)
+    {
+      // std::cout << "\n\n\n>>> entry: " << entry << std::endl;
+      for(std::map<std::pair<std::pair<int,int>,int>,std::vector<float> >::const_iterator mapIt = simHits_OOT_times.begin(); mapIt != simHits_OOT_times.end(); ++mapIt)
+      {
+        std::cout << ">>>>>> ieta: " << mapIt->first.first.first << "   iphi: " << mapIt->first.first.second << "   RU: " << mapIt->first.second << "\r" << std::flush;
+        // for(unsigned int ii = 0; ii < mapIt->second.size(); ++ii)
+        //   std::cout << "   t,E=[" << simHits_OOT_times[mapIt->first].at(ii) << "," << simHits_OOT_energies[mapIt->first].at(ii) << "]";
+        // std::cout << std::endl;
+        
+        TF1* func = new TF1("func",myfunction,0.,nOOT*25.,1+2*mapIt->second.size());
+        func -> SetNpx(nOOT*25.*10.);
+        func -> SetParameter(0,mapIt->second.size());
+        for(unsigned int ii = 0; ii < mapIt->second.size(); ++ii)
+        {
+          func -> SetParameter(1+2*ii+0,simHits_OOT_times[mapIt->first].at(ii));
+          func -> SetParameter(1+2*ii+1,simHits_OOT_energies[mapIt->first].at(ii));
+        }
+        float funcMax = func->GetMaximum((nOOT-1)*25.,nOOT*25.);
+        
+        for(int jj = 0; jj < 200; ++jj)
+        {
+          float cut = pow(10.,-2.+3./200.*jj);
+          if( funcMax > 0.022929*cut ) ++simHits_OOT_n_vs_RU_energyCut[cut][mapIt->first.second];
+        }
+        
+      }
+      
+      simHits_OOT_times.clear();
+      simHits_OOT_energies.clear();
+      ++nEntries_OOT;
+      std::cout << std::endl;
+    }
     
     
     
     //--------------------------
     //--- fill all simHits plots
     if( debugMode ) std::cout << ">>> fill all simHits plots" << std::endl;
-    std::map<std::pair<int,int>,int> nTracks_perSimHit;
     std::map<std::pair<int,int>,float> energy_perSimHit;
     std::map<std::pair<int,int>,int> RU_perSimHit;
-    bool write = false;
     for(unsigned int simHitIt = 0; simHitIt < simHits_energy->size(); ++simHitIt)
     {
       if( simHits_det->at(simHitIt) != 1 ) continue;
       int ieta = simHits_ieta->at(simHitIt);
       int iphi = simHits_iphi->at(simHitIt);
       int RU = ((simHits_module->at(simHitIt)-1) + (simHits_modType->at(simHitIt)-1)*nModsPerType) / nModsPerRU;
-      float energy = simHits_energy->at(simHitIt);
       float time = simHits_time->at(simHitIt);
+      float energy = simHits_energy->at(simHitIt);
       
       // std::pair<int,int> map_key(ieta,iphi);
       // if( h1_simHit_time_perChannel[map_key] == NULL )
@@ -427,6 +529,8 @@ int main(int argc, char** argv)
       
       energy_perSimHit[std::make_pair(ieta,iphi)] += energy;
       RU_perSimHit[std::make_pair(ieta,iphi)] = RU;
+      (simHits_OOT_times[std::make_pair(std::make_pair(ieta,iphi),RU)]).push_back( (entry%nOOT)*25. + time );
+      (simHits_OOT_energies[std::make_pair(std::make_pair(ieta,iphi),RU)]).push_back( energy );
     }
     
     for(int jj = 0; jj < 200; ++jj)
@@ -464,25 +568,54 @@ int main(int argc, char** argv)
       float genPt = tracks_mcMatch_genPt->at(trackIt);
       float DR = tracks_mcMatch_DR->at(trackIt);
       
+      float weight = 1.;
+      float weight_eta = 1.;
+      float weight_pt = 1.;
+      if( weightsFile )
+      {
+        float binWidth_eta = weightsMap_eta_pt->GetXaxis()->GetBinWidth( weightsMap_eta_pt->GetXaxis()->FindBin(fabs(eta)) );
+        float binWidth_pt  = weightsMap_eta_pt->GetYaxis()->GetBinWidth( weightsMap_eta_pt->GetYaxis()->FindBin(pt) );
+        weight = weightsMap_eta_pt->GetBinContent(weightsMap_eta_pt->FindBin(fabs(eta),pt)) / weightsMap_eta_pt->Integral() / (binWidth_pt*binWidth_eta);
+        weight_eta = weightsMap_eta->GetBinContent(weightsMap_eta->FindBin(fabs(eta))) / weightsMap_eta->Integral() / binWidth_eta;
+        weight_pt = weightsMap_pt->GetBinContent(weightsMap_pt->FindBin(pt)) / weightsMap_pt->Integral() / binWidth_pt;
+      }
+      
       if( eta_atBTL < -100. ) continue;
       if( isHighPurity != 1 ) continue;
       if( DR > 0.01 ) continue;
       if( fabs(pt/genPt-1.) > 0.05 ) continue;
       
-      int ptBin = h1_nEntries_ptRanges -> Fill( pt );
+      int ptBin = h1_nEntries_ptRanges -> Fill( pt,weight_pt );
       if( ptBin < 1 || ptBin > int(ptRanges.size()) ) continue;
       
-      int etaBin = h1_nEntries_etaRanges -> Fill( fabs(eta) );
+      int etaBin = h1_nEntries_etaRanges -> Fill( fabs(eta),weight_eta );
       if( etaBin < 1 || etaBin > int(etaRanges.size()) ) continue;
-      
+
+      float firstTime = 999999.;
       for(unsigned int simHitIt = 0; simHitIt < (matchedSimHits_energy->at(trackIt)).size(); ++simHitIt)
       {
-        h1_matchedSimHit_track_RDphi -> Fill( (matchedSimHits_track_RDphi->at(trackIt)).at(simHitIt) );
-        h1_matchedSimHit_track_Dz -> Fill( (matchedSimHits_track_Dz->at(trackIt)).at(simHitIt) );
-        
-        h1_matchedSimHit_track_RDphi_pt_eta[std::make_pair(ptRanges.at(ptBin-1),ptRanges.at(ptBin))][std::make_pair(etaRanges.at(etaBin-1),etaRanges.at(etaBin))] -> Fill( (matchedSimHits_track_RDphi->at(trackIt)).at(simHitIt) );
-        h1_matchedSimHit_track_Dz_pt_eta[std::make_pair(ptRanges.at(ptBin-1),ptRanges.at(ptBin))][std::make_pair(etaRanges.at(etaBin-1),etaRanges.at(etaBin))] -> Fill( (matchedSimHits_track_Dz->at(trackIt)).at(simHitIt) );
+        if( (matchedSimHits_time->at(trackIt)).at(simHitIt) < firstTime )
+          firstTime = (matchedSimHits_time->at(trackIt)).at(simHitIt);
       }
+      
+      float energySum = 0.;
+      for(unsigned int simHitIt = 0; simHitIt < (matchedSimHits_energy->at(trackIt)).size(); ++simHitIt)
+      {
+        if( ((matchedSimHits_time->at(trackIt)).at(simHitIt)-firstTime) > 0.200 ) continue;
+        
+        energySum += (matchedSimHits_energy->at(trackIt)).at(simHitIt);
+        
+        h1_matchedSimHit_track_RDphi -> Fill( (matchedSimHits_track_RDphi->at(trackIt)).at(simHitIt),weight );
+        h1_matchedSimHit_track_Dz -> Fill( (matchedSimHits_track_Dz->at(trackIt)).at(simHitIt),weight );
+        
+        h1_matchedSimHit_track_RDphi_pt_eta[std::make_pair(ptRanges.at(ptBin-1),ptRanges.at(ptBin))][std::make_pair(etaRanges.at(etaBin-1),etaRanges.at(etaBin))] -> Fill( (matchedSimHits_track_RDphi->at(trackIt)).at(simHitIt),weight );
+        h1_matchedSimHit_track_Dz_pt_eta[std::make_pair(ptRanges.at(ptBin-1),ptRanges.at(ptBin))][std::make_pair(etaRanges.at(etaBin-1),etaRanges.at(etaBin))] -> Fill( (matchedSimHits_track_Dz->at(trackIt)).at(simHitIt),weight );
+      }
+      
+      h1_matchedSimHit_energySum__ptWei -> Fill( energySum,weight );
+      if( pt > 4. ) h1_matchedSimHit_energySum__ptHig -> Fill( energySum,weight_eta );
+      if( fabs(eta) < 0.1 ) h1_matchedSimHit_energySum__ieta1__ptWei -> Fill( energySum,weight );
+      if( fabs(eta) < 0.1 && pt > 4. ) h1_matchedSimHit_energySum__ieta1__ptHig -> Fill( energySum,weight_eta );
       
       std::map<std::pair<int,int>,float> energy_perRecHit;
       int entry_ieta = 999;
@@ -570,6 +703,18 @@ int main(int argc, char** argv)
       int isHighPurity = 1;//tracks_isHighPurity->at(trackIt);
       float genPt = tracks_mcMatch_genPt->at(trackIt);
       float DR = tracks_mcMatch_DR->at(trackIt);
+
+      float weight = 1.;
+      float weight_eta = 1.;
+      float weight_pt = 1.;
+      if( weightsFile )
+      {
+        float binWidth_eta = weightsMap_eta_pt->GetXaxis()->GetBinWidth( weightsMap_eta_pt->GetXaxis()->FindBin(fabs(eta)) );
+        float binWidth_pt  = weightsMap_eta_pt->GetYaxis()->GetBinWidth( weightsMap_eta_pt->GetYaxis()->FindBin(pt) );
+        weight = weightsMap_eta_pt->GetBinContent(weightsMap_eta_pt->FindBin(fabs(eta),pt)) / weightsMap_eta_pt->Integral() / (binWidth_pt*binWidth_eta);
+        weight_eta = weightsMap_eta->GetBinContent(weightsMap_eta->FindBin(fabs(eta))) / weightsMap_eta->Integral() / binWidth_eta;
+        weight_pt = weightsMap_pt->GetBinContent(weightsMap_pt->FindBin(pt)) / weightsMap_pt->Integral() / binWidth_pt;
+      }      
       
       if( eta_atBTL < -100. ) continue;
       if( isHighPurity != 1 ) continue;
@@ -581,31 +726,56 @@ int main(int argc, char** argv)
       phi_atBTL_fold = fabs(phi_atBTL) - 2.*((2.*3.14159-4.*0.0415)/36.) * iTray - 0.006;
       
       ++nGoodTracks;
-      h1_tracks_pt -> Fill( tracks_pt->at(trackIt) );
-      h1_tracks_eta -> Fill( fabs(tracks_eta->at(trackIt)) );
-      h1_tracks_phi -> Fill( tracks_phi->at(trackIt) );
-      h1_tracks_eta_atBTL -> Fill( fabs(tracks_eta_atBTL->at(trackIt)) );
-      h1_tracks_phi_atBTL -> Fill( tracks_phi_atBTL->at(trackIt) );
+      h1_tracks_pt -> Fill( tracks_pt->at(trackIt),weight );
+      h1_tracks_eta -> Fill( fabs(tracks_eta->at(trackIt)),weight );
+      h1_tracks_phi -> Fill( tracks_phi->at(trackIt),weight );
+      h1_tracks_eta_atBTL -> Fill( fabs(tracks_eta_atBTL->at(trackIt)),weight );
+      h1_tracks_phi_atBTL -> Fill( tracks_phi_atBTL->at(trackIt),weight );
+      h2_tracks_pt_vs_eta -> Fill( fabs(tracks_eta->at(trackIt)),tracks_pt->at(trackIt),weight );
       
-      int bin = h1_nEntries_ptRanges -> Fill( pt );
-      if( bin < 1 || bin > int(ptRanges.size()) ) continue;
+      int bin_pt = h1_nEntries_ptRanges -> Fill( pt,weight );
+      if( bin_pt < 1 || bin_pt > int(ptRanges.size()) ) continue;
 
+      int bin_eta = h1_nEntries_etaRanges -> Fill( fabs(eta),weight );
+      if( bin_eta < 1 || bin_eta > int(etaRanges.size()) ) continue;
+      
       float DCRCorr = 1.;
       float fluenceCorr = 1.;
+
+      float matchedSimHit_energyTot = +999.;
+      float matchedSimHit_timeFirst = +999.;
+      float matchedSimHit_timeAve = 0.;
+      for(unsigned int simHitIt = 0; simHitIt < (matchedSimHits_energy->at(trackIt)).size(); ++simHitIt)
+      {
+        if( (matchedSimHits_det->at(trackIt)).at(simHitIt) != 1 ) continue;
+        
+        float simHitE = (matchedSimHits_energy->at(trackIt)).at(simHitIt);
+        float simHitTime = (matchedSimHits_time->at(trackIt)).at(simHitIt);
+        
+        if( simHitTime < matchedSimHit_timeFirst ) matchedSimHit_timeFirst = simHitTime;
+        matchedSimHit_energyTot += simHitE;
+        matchedSimHit_timeAve += simHitE*simHitTime;
+      }
+      matchedSimHit_timeAve /= matchedSimHit_energyTot;
+
       
-      float energyMax = -999999;
+      int ietaMax = -999;
+      int iphiMax = -999;
+      float timeMax = -999999.;
+      float energyMax = -999999.;
       float energySum = 0.;
       float energySumCorr = 0.;
       for(unsigned int recHitIt = 0; recHitIt < (matchedRecHits_energy->at(trackIt)).size(); ++recHitIt)
       {
         if( (matchedRecHits_det->at(trackIt)).at(recHitIt) != 1 ) continue;
         float recHitE = (matchedRecHits_energy->at(trackIt)).at(recHitIt);
+        float recHitTime = (matchedRecHits_time->at(trackIt)).at(recHitIt);
         
-        h1_matchedRecHit_energy -> Fill( recHitE );
-        h1_matchedRecHit_time -> Fill( (matchedRecHits_time->at(trackIt)).at(recHitIt) );
+        h1_matchedRecHit_energy -> Fill( recHitE,weight );
+        h1_matchedRecHit_time -> Fill( recHitTime,weight );
         
-        h1_matchedRecHit_track_DR -> Fill( (matchedRecHits_track_DR->at(trackIt)).at(recHitIt) );
-        h1_matchedRecHit_track_dist -> Fill( (matchedRecHits_track_dist->at(trackIt)).at(recHitIt) );
+        h1_matchedRecHit_track_DR -> Fill( (matchedRecHits_track_DR->at(trackIt)).at(recHitIt),weight );
+        h1_matchedRecHit_track_dist -> Fill( (matchedRecHits_track_dist->at(trackIt)).at(recHitIt),weight );
         
         energySum += recHitE;
         if( (matchedRecHits_modType->at(trackIt)).at(recHitIt) == 1 )
@@ -614,6 +784,9 @@ int main(int argc, char** argv)
           if( recHitE > energyMax )
           {
             energyMax = recHitE;
+            timeMax = recHitTime;
+            ietaMax = (matchedRecHits_ieta->at(trackIt)).at(recHitIt);
+            iphiMax = (matchedRecHits_iphi->at(trackIt)).at(recHitIt);
             DCRCorr = 3.15*3.75/9.;
             fluenceCorr = f_fluence_vs_eta->Eval(fabs(tracks_eta_atBTL->at(trackIt))) / f_fluence_vs_eta->Eval(1.45);
           }
@@ -624,6 +797,9 @@ int main(int argc, char** argv)
           if( recHitE > energyMax )
           {
             energyMax = recHitE;
+            timeMax = recHitTime;
+            ietaMax = (matchedRecHits_ieta->at(trackIt)).at(recHitIt);
+            iphiMax = (matchedRecHits_iphi->at(trackIt)).at(recHitIt);
             DCRCorr = 3.15*3.00/9.;
             fluenceCorr = f_fluence_vs_eta->Eval(fabs(tracks_eta_atBTL->at(trackIt))) / f_fluence_vs_eta->Eval(1.45);
           }
@@ -634,17 +810,25 @@ int main(int argc, char** argv)
           if( recHitE > energyMax )
           {
             energyMax = recHitE;
+            timeMax = recHitTime;
+            ietaMax = (matchedRecHits_ieta->at(trackIt)).at(recHitIt);
+            iphiMax = (matchedRecHits_iphi->at(trackIt)).at(recHitIt);
             DCRCorr = 3.15*2.40/9.;
             fluenceCorr = f_fluence_vs_eta->Eval(fabs(tracks_eta_atBTL->at(trackIt))) / f_fluence_vs_eta->Eval(1.45);
           }
         }
         
-        p1_matchedRecHit_time_vs_eta -> Fill( fabs(eta),(matchedRecHits_time->at(trackIt)).at(recHitIt) );
+        p1_matchedRecHit_time_vs_eta -> Fill( fabs(eta),recHitTime,weight_pt );
       }
-      h1_matchedRecHit_energySum -> Fill( energySum );
-      h1_matchedRecHit_energySumCorr -> Fill( energySumCorr );
+      h1_matchedRecHit_energySum -> Fill( energySum,weight );
+      h1_matchedRecHit_energySumCorr -> Fill( energySumCorr,weight );
       
-
+      h1_matchedRecHit_energySum__ptWei -> Fill( energySum,weight );
+      if( pt > 4. ) h1_matchedRecHit_energySum__ptHig -> Fill( energySum,weight_eta );
+      if( fabs(eta) < 0.1 ) h1_matchedRecHit_energySum__ieta1__ptWei -> Fill( energySum,weight );
+      if( fabs(eta) < 0.1 && pt > 4. ) h1_matchedRecHit_energySum__ieta1__ptHig -> Fill( energySum,weight_eta );
+      
+      
       // plot vs Ethr
       for(int jj = 0; jj < 100; ++jj)
       {
@@ -667,35 +851,35 @@ int main(int argc, char** argv)
           }
         }
         
-        if( matchedRecHit_totEnergy > 2.75 ) p1_matchedRecHit_eff_vs_Ethr -> Fill( 1.,cut );
+        if( matchedRecHit_totEnergy > 2.00 ) p1_matchedRecHit_eff_vs_Ethr -> Fill( 1.,cut );
         else                                 p1_matchedRecHit_eff_vs_Ethr -> Fill( 0.,cut );
         
-        if( matchedRecHit_totEnergy < 2.75 ) continue;
+        if( matchedRecHit_totEnergy < 2.00 ) continue;
         
         float Npe_totEnergy = LY*matchedRecHit_totEnergy*LCE*PDE;
-        float sigmaT_stat_totEnergy = 35.4*sqrt(12480/Npe_totEnergy);
-        float sigmaT_DCR_totEnergy = 32.*sqrt(DCR*DCRCorr*fluenceCorr/20.)*(9000./Npe_totEnergy);
+        float sigmaT_stat_totEnergy = 43.*sqrt(6450./Npe_totEnergy);
+        float sigmaT_DCR_totEnergy = 30.*sqrt(DCR*DCRCorr*fluenceCorr/20.)*(9000./Npe_totEnergy);
         float sigmaT_totEnergy = sqrt( pow(sigma_clock,2.) + pow(sigma_digi/sigma_red,2.) + pow(sigma_ele/sigma_red,2.) + pow(sigmaT_stat_totEnergy/sigma_red,2.) + pow(sigmaT_DCR_totEnergy/sigma_red,2.) );
         
         float Npe_maxEnergy = LY*matchedRecHit_maxEnergy*LCE*PDE;
-        float sigmaT_stat_maxEnergy = 35.4*sqrt(12480/Npe_maxEnergy);
-        float sigmaT_DCR_maxEnergy = 32.*sqrt(DCR*DCRCorr*fluenceCorr/20.)*(9000./Npe_maxEnergy);
+        float sigmaT_stat_maxEnergy = 43.*sqrt(6450./Npe_maxEnergy);
+        float sigmaT_DCR_maxEnergy = 30.*sqrt(DCR*DCRCorr*fluenceCorr/20.)*(9000./Npe_maxEnergy);
         float sigmaT_maxEnergy = sqrt( pow(sigma_clock,2.) + pow(sigma_digi/sigma_red,2.) + pow(sigma_ele/sigma_red,2.) + pow(sigmaT_stat_maxEnergy/sigma_red,2.) + pow(sigmaT_DCR_maxEnergy/sigma_red,2.) );
         
         float sigmaT_sumEnergy = 0.;
         for(auto vecIt : Npe_sumEnergy)
         {
           float Npe_temp = vecIt;
-          float sigmaT_stat_temp = 35.4*sqrt(12480/Npe_temp);
-          float sigmaT_DCR_temp = 32.*sqrt(DCR*DCRCorr*fluenceCorr/20.)*(9000./Npe_temp);
+          float sigmaT_stat_temp = 43.*sqrt(6450./Npe_temp);
+          float sigmaT_DCR_temp = 30.*sqrt(DCR*DCRCorr*fluenceCorr/20.)*(9000./Npe_temp);
           float sigmaT_temp = sqrt( pow(sigma_clock,2.) + pow(sigma_digi/sigma_red,2.) + pow(sigma_ele/sigma_red,2.) + pow(sigmaT_stat_temp/sigma_red,2.) + pow(sigmaT_DCR_temp/sigma_red,2.) );
           sigmaT_sumEnergy += 1. / pow(sigmaT_temp,2.);
         }
         sigmaT_sumEnergy = sqrt( 1./sigmaT_sumEnergy );
         
-        p1_matchedRecHit_timeRes_vs_Ethr_totEnergy -> Fill( cut,sigmaT_totEnergy );
-        p1_matchedRecHit_timeRes_vs_Ethr_maxEnergy -> Fill( cut,sigmaT_maxEnergy );
-        p1_matchedRecHit_timeRes_vs_Ethr_sumEnergy -> Fill( cut,sigmaT_sumEnergy );
+        p1_matchedRecHit_timeRes_vs_Ethr_totEnergy -> Fill( cut,sigmaT_totEnergy,weight );
+        p1_matchedRecHit_timeRes_vs_Ethr_maxEnergy -> Fill( cut,sigmaT_maxEnergy,weight );
+        p1_matchedRecHit_timeRes_vs_Ethr_sumEnergy -> Fill( cut,sigmaT_sumEnergy,weight );
       }
       
       
@@ -705,110 +889,129 @@ int main(int argc, char** argv)
         int matchedRecHit_n = 0;
         float matchedRecHit_totEnergy = 0.;
         float matchedRecHit_maxEnergy = -999.;
+        float matchedRecHit_maxTime = -999.;
+        float matchedRecHit_sumTime = 0.;
+        float matchedRecHit_sumTime_energyWeighted = 0.;
         std::vector<float> Npe_sumEnergy;
         
         for(unsigned int recHitIt = 0; recHitIt < (matchedRecHits_energy->at(trackIt)).size(); ++recHitIt)
         {
-          if( (matchedRecHits_energy->at(trackIt)).at(recHitIt) > Ethr )
+          if( (matchedRecHits_energy->at(trackIt)).at(recHitIt) < Ethr ) continue;
+          
+          ++matchedRecHit_n;
+          
+          matchedRecHit_totEnergy += (matchedRecHits_energy->at(trackIt)).at(recHitIt);
+          matchedRecHit_sumTime += (matchedRecHits_time->at(trackIt)).at(recHitIt);
+          matchedRecHit_sumTime_energyWeighted += (matchedRecHits_time->at(trackIt)).at(recHitIt) * (matchedRecHits_energy->at(trackIt)).at(recHitIt);
+          
+          if( (matchedRecHits_energy->at(trackIt)).at(recHitIt) > matchedRecHit_maxEnergy )
           {
-            ++matchedRecHit_n;
-            matchedRecHit_totEnergy += (matchedRecHits_energy->at(trackIt)).at(recHitIt);
-            if( (matchedRecHits_energy->at(trackIt)).at(recHitIt) > matchedRecHit_maxEnergy )
-              matchedRecHit_maxEnergy = (matchedRecHits_energy->at(trackIt)).at(recHitIt);
-            Npe_sumEnergy.push_back( LY*(matchedRecHits_energy->at(trackIt)).at(recHitIt)*LCE*PDE );
+            matchedRecHit_maxEnergy = (matchedRecHits_energy->at(trackIt)).at(recHitIt);
+            matchedRecHit_maxTime = (matchedRecHits_time->at(trackIt)).at(recHitIt);
           }
+          
+          Npe_sumEnergy.push_back( LY*(matchedRecHits_energy->at(trackIt)).at(recHitIt)*LCE*PDE );
         }
         
+        matchedRecHit_sumTime /= matchedRecHit_n;
+        matchedRecHit_sumTime_energyWeighted /= matchedRecHit_totEnergy;
+        
         float Npe_totEnergy = LY*matchedRecHit_totEnergy*LCE*PDE;
-        float sigmaT_stat_totEnergy = 35.4*sqrt(12480/Npe_totEnergy);
-        float sigmaT_DCR_totEnergy = 32.*sqrt(DCR*DCRCorr*fluenceCorr/20.)*(9000./Npe_totEnergy);
+        float sigmaT_stat_totEnergy = 43.*sqrt(6450./Npe_totEnergy);
+        float sigmaT_DCR_totEnergy = 30.*sqrt(DCR*DCRCorr*fluenceCorr/20.)*(9000./Npe_totEnergy);
         float sigmaT_totEnergy = sqrt( pow(sigma_clock,2.) + pow(sigma_digi/sigma_red,2.) + pow(sigma_ele/sigma_red,2.) + pow(sigmaT_stat_totEnergy/sigma_red,2.) + pow(sigmaT_DCR_totEnergy/sigma_red,2.) );
         
         float Npe_maxEnergy = LY*matchedRecHit_maxEnergy*LCE*PDE;
-        float sigmaT_stat_maxEnergy = 35.4*sqrt(12480/Npe_maxEnergy);
-        float sigmaT_DCR_maxEnergy = 32.*sqrt(DCR*DCRCorr*fluenceCorr/20.)*(9000./Npe_maxEnergy);
+        float sigmaT_stat_maxEnergy = 43.*sqrt(6450./Npe_maxEnergy);
+        float sigmaT_DCR_maxEnergy = 30.*sqrt(DCR*DCRCorr*fluenceCorr/20.)*(9000./Npe_maxEnergy);
         float sigmaT_maxEnergy = sqrt( pow(sigma_clock,2.) + pow(sigma_digi/sigma_red,2.) + pow(sigma_ele/sigma_red,2.) + pow(sigmaT_stat_maxEnergy/sigma_red,2.) + pow(sigmaT_DCR_maxEnergy/sigma_red,2.) );
         
         float sigmaT_sumEnergy = 0.;
         for(auto vecIt : Npe_sumEnergy)
         {
           float Npe_temp = vecIt;
-          float sigmaT_stat_temp = 35.4*sqrt(12480/Npe_temp);
-          float sigmaT_DCR_temp = 32.*sqrt(DCR*DCRCorr*fluenceCorr/20.)*(9000./Npe_temp);
+          float sigmaT_stat_temp = 43.*sqrt(6450./Npe_temp);
+          float sigmaT_DCR_temp = 30.*sqrt(DCR*DCRCorr*fluenceCorr/20.)*(9000./Npe_temp);
           float sigmaT_temp = sqrt( pow(sigma_clock,2.) + pow(sigma_digi/sigma_red,2.) + pow(sigma_ele/sigma_red,2.) + pow(sigmaT_stat_temp/sigma_red,2.) + pow(sigmaT_DCR_temp/sigma_red,2.) );
           sigmaT_sumEnergy += 1. / pow(sigmaT_temp,2.);
         }
         sigmaT_sumEnergy = sqrt( 1./sigmaT_sumEnergy );
         
+
+        // per eta bin
+        h1_matchedRecHit_timeMax[Ethr][std::make_pair(etaRanges.at(bin_eta-1),etaRanges.at(bin_eta))] -> Fill( matchedRecHit_maxTime-matchedSimHit_timeFirst,weight );
+        h1_matchedRecHit_timeSum[Ethr][std::make_pair(etaRanges.at(bin_eta-1),etaRanges.at(bin_eta))] -> Fill( matchedRecHit_sumTime-matchedSimHit_timeFirst,weight );
+        h1_matchedRecHit_timeSum_energyWeighted[Ethr][std::make_pair(etaRanges.at(bin_eta-1),etaRanges.at(bin_eta))] -> Fill( matchedRecHit_sumTime_energyWeighted-matchedSimHit_timeFirst,weight );
+        
         
         // all pt
-        p1_matchedRecHit_n_vs_eta[Ethr][std::make_pair(ptRangesMin,ptRangesMax)] -> Fill( eta_atBTL,matchedRecHit_n );
-        if( matchedRecHit_totEnergy > 2.75 ) p1_matchedRecHit_eff_vs_eta[Ethr][std::make_pair(ptRangesMin,ptRangesMax)] -> Fill( 1.,fabs(eta_atBTL) );
+        p1_matchedRecHit_n_vs_eta[Ethr][std::make_pair(ptRangesMin,ptRangesMax)] -> Fill( eta_atBTL,matchedRecHit_n,weight_pt );
+        if( matchedRecHit_totEnergy > 2.00 ) p1_matchedRecHit_eff_vs_eta[Ethr][std::make_pair(ptRangesMin,ptRangesMax)] -> Fill( 1.,fabs(eta_atBTL) );
         else                                 p1_matchedRecHit_eff_vs_eta[Ethr][std::make_pair(ptRangesMin,ptRangesMax)] -> Fill( 0.,fabs(eta_atBTL) );
         
         p1_matchedRecHit_n_vs_phi[Ethr][std::make_pair(ptRangesMin,ptRangesMax)] -> Fill( phi_atBTL,matchedRecHit_n );
-        if( matchedRecHit_totEnergy > 2.75 ) p1_matchedRecHit_eff_vs_phi[Ethr][std::make_pair(ptRangesMin,ptRangesMax)] -> Fill( 1.,phi_atBTL );
+        if( matchedRecHit_totEnergy > 2.00 ) p1_matchedRecHit_eff_vs_phi[Ethr][std::make_pair(ptRangesMin,ptRangesMax)] -> Fill( 1.,phi_atBTL );
         else                                 p1_matchedRecHit_eff_vs_phi[Ethr][std::make_pair(ptRangesMin,ptRangesMax)] -> Fill( 0.,phi_atBTL );
-        if( matchedRecHit_totEnergy > 2.75 ) p1_matchedRecHit_eff_vs_phiFold[Ethr][std::make_pair(ptRangesMin,ptRangesMax)] -> Fill( 1.,phi_atBTL_fold );
+        if( matchedRecHit_totEnergy > 2.00 ) p1_matchedRecHit_eff_vs_phiFold[Ethr][std::make_pair(ptRangesMin,ptRangesMax)] -> Fill( 1.,phi_atBTL_fold );
         else                                 p1_matchedRecHit_eff_vs_phiFold[Ethr][std::make_pair(ptRangesMin,ptRangesMax)] -> Fill( 0.,phi_atBTL_fold );
         
-        if( matchedRecHit_totEnergy > 2.75 ) p1_matchedRecHit_eff_vs_pt[Ethr] -> Fill( 1.,pt );
+        if( matchedRecHit_totEnergy > 2.00 ) p1_matchedRecHit_eff_vs_pt[Ethr] -> Fill( 1.,pt );
         else                                 p1_matchedRecHit_eff_vs_pt[Ethr] -> Fill( 0.,pt );
                 
-        h1_matchedRecHit_totEnergy[Ethr][std::make_pair(ptRangesMin,ptRangesMax)] -> Fill( matchedRecHit_totEnergy );
+        h1_matchedRecHit_totEnergy[Ethr][std::make_pair(ptRangesMin,ptRangesMax)] -> Fill( matchedRecHit_totEnergy,weight );
         
-        if( matchedRecHit_totEnergy > 2.75 )
+        if( matchedRecHit_totEnergy > 2.00 )
         {
-          p1_matchedRecHit_totEnergy_vs_eta[Ethr][std::make_pair(ptRangesMin,ptRangesMax)] -> Fill( fabs(eta_atBTL),matchedRecHit_totEnergy );
-          p1_matchedRecHit_avgEnergy_vs_eta[Ethr][std::make_pair(ptRangesMin,ptRangesMax)] -> Fill( fabs(eta_atBTL),matchedRecHit_totEnergy/matchedRecHit_n );
-          p1_matchedRecHit_maxEnergy_vs_eta[Ethr][std::make_pair(ptRangesMin,ptRangesMax)] -> Fill( fabs(eta_atBTL),matchedRecHit_maxEnergy );
-          p1_matchedRecHit_maxOverTotEnergy_vs_eta[Ethr][std::make_pair(ptRangesMin,ptRangesMax)] -> Fill( fabs(eta_atBTL),matchedRecHit_maxEnergy/matchedRecHit_totEnergy );
+          p1_matchedRecHit_totEnergy_vs_eta[Ethr][std::make_pair(ptRangesMin,ptRangesMax)] -> Fill( fabs(eta_atBTL),matchedRecHit_totEnergy,weight_pt );
+          p1_matchedRecHit_avgEnergy_vs_eta[Ethr][std::make_pair(ptRangesMin,ptRangesMax)] -> Fill( fabs(eta_atBTL),matchedRecHit_totEnergy/matchedRecHit_n,weight_pt );
+          p1_matchedRecHit_maxEnergy_vs_eta[Ethr][std::make_pair(ptRangesMin,ptRangesMax)] -> Fill( fabs(eta_atBTL),matchedRecHit_maxEnergy,weight_pt );
+          p1_matchedRecHit_maxOverTotEnergy_vs_eta[Ethr][std::make_pair(ptRangesMin,ptRangesMax)] -> Fill( fabs(eta_atBTL),matchedRecHit_maxEnergy/matchedRecHit_totEnergy,weight_pt );
           
-          p1_matchedRecHit_timeRes_vs_eta_totEnergy[Ethr][std::make_pair(ptRangesMin,ptRangesMax)] -> Fill( fabs(eta_atBTL),sigmaT_totEnergy );
-          p1_matchedRecHit_timeRes_vs_eta_maxEnergy[Ethr][std::make_pair(ptRangesMin,ptRangesMax)] -> Fill( fabs(eta_atBTL),sigmaT_maxEnergy );
-          p1_matchedRecHit_timeRes_vs_eta_sumEnergy[Ethr][std::make_pair(ptRangesMin,ptRangesMax)] -> Fill( fabs(eta_atBTL),sigmaT_sumEnergy );
+          p1_matchedRecHit_timeRes_vs_eta_totEnergy[Ethr][std::make_pair(ptRangesMin,ptRangesMax)] -> Fill( fabs(eta_atBTL),sigmaT_totEnergy,weight_pt );
+          p1_matchedRecHit_timeRes_vs_eta_maxEnergy[Ethr][std::make_pair(ptRangesMin,ptRangesMax)] -> Fill( fabs(eta_atBTL),sigmaT_maxEnergy,weight_pt );
+          p1_matchedRecHit_timeRes_vs_eta_sumEnergy[Ethr][std::make_pair(ptRangesMin,ptRangesMax)] -> Fill( fabs(eta_atBTL),sigmaT_sumEnergy,weight_pt );
 
-          p1_matchedRecHit_timeRes_stat_vs_eta_totEnergy[Ethr][std::make_pair(ptRangesMin,ptRangesMax)] -> Fill( fabs(eta_atBTL),sigmaT_stat_totEnergy/sigma_red );
-          p1_matchedRecHit_timeRes_DCR_vs_eta_totEnergy[Ethr][std::make_pair(ptRangesMin,ptRangesMax)] -> Fill( fabs(eta_atBTL),sigmaT_DCR_totEnergy/sigma_red );
+          p1_matchedRecHit_timeRes_stat_vs_eta_totEnergy[Ethr][std::make_pair(ptRangesMin,ptRangesMax)] -> Fill( fabs(eta_atBTL),sigmaT_stat_totEnergy/sigma_red,weight_pt );
+          p1_matchedRecHit_timeRes_DCR_vs_eta_totEnergy[Ethr][std::make_pair(ptRangesMin,ptRangesMax)] -> Fill( fabs(eta_atBTL),sigmaT_DCR_totEnergy/sigma_red,weight_pt );
           
-          p1_matchedRecHit_totEnergy_vs_phi[Ethr][std::make_pair(ptRangesMin,ptRangesMax)] -> Fill( phi_atBTL,matchedRecHit_totEnergy );
-          p1_matchedRecHit_avgEnergy_vs_phi[Ethr][std::make_pair(ptRangesMin,ptRangesMax)] -> Fill( phi_atBTL,matchedRecHit_totEnergy/matchedRecHit_n );
+          p1_matchedRecHit_totEnergy_vs_phi[Ethr][std::make_pair(ptRangesMin,ptRangesMax)] -> Fill( phi_atBTL,matchedRecHit_totEnergy,weight );
+          p1_matchedRecHit_avgEnergy_vs_phi[Ethr][std::make_pair(ptRangesMin,ptRangesMax)] -> Fill( phi_atBTL,matchedRecHit_totEnergy/matchedRecHit_n,weight );
         }
-
+        
         
         // per pt-bin
-        p1_matchedRecHit_n_vs_eta[Ethr][std::make_pair(ptRanges.at(bin-1),ptRanges.at(bin))] -> Fill( eta_atBTL,matchedRecHit_n );
-        if( matchedRecHit_totEnergy > 2.75 ) p1_matchedRecHit_eff_vs_eta[Ethr][std::make_pair(ptRanges.at(bin-1),ptRanges.at(bin))] -> Fill( 1.,fabs(eta_atBTL) );
-        else                                 p1_matchedRecHit_eff_vs_eta[Ethr][std::make_pair(ptRanges.at(bin-1),ptRanges.at(bin))] -> Fill( 0.,fabs(eta_atBTL) );
+        p1_matchedRecHit_n_vs_eta[Ethr][std::make_pair(ptRanges.at(bin_pt-1),ptRanges.at(bin_pt))] -> Fill( eta_atBTL,matchedRecHit_n,weight_pt );
+        if( matchedRecHit_totEnergy > 2.00 ) p1_matchedRecHit_eff_vs_eta[Ethr][std::make_pair(ptRanges.at(bin_pt-1),ptRanges.at(bin_pt))] -> Fill( 1.,fabs(eta_atBTL) );
+        else                                 p1_matchedRecHit_eff_vs_eta[Ethr][std::make_pair(ptRanges.at(bin_pt-1),ptRanges.at(bin_pt))] -> Fill( 0.,fabs(eta_atBTL) );
         
-        p1_matchedRecHit_n_vs_phi[Ethr][std::make_pair(ptRanges.at(bin-1),ptRanges.at(bin))] -> Fill( phi_atBTL,matchedRecHit_n );
-        if( matchedRecHit_n > 0 ) p1_matchedRecHit_eff_vs_phi[Ethr][std::make_pair(ptRanges.at(bin-1),ptRanges.at(bin))] -> Fill( 1.,phi_atBTL );
-        else                      p1_matchedRecHit_eff_vs_phi[Ethr][std::make_pair(ptRanges.at(bin-1),ptRanges.at(bin))] -> Fill( 0.,phi_atBTL );
-        if( matchedRecHit_n > 0 ) p1_matchedRecHit_eff_vs_phiFold[Ethr][std::make_pair(ptRanges.at(bin-1),ptRanges.at(bin))] -> Fill( 1.,phi_atBTL_fold );
-        else                      p1_matchedRecHit_eff_vs_phiFold[Ethr][std::make_pair(ptRanges.at(bin-1),ptRanges.at(bin))] -> Fill( 0.,phi_atBTL_fold );
+        p1_matchedRecHit_n_vs_phi[Ethr][std::make_pair(ptRanges.at(bin_pt-1),ptRanges.at(bin_pt))] -> Fill( phi_atBTL,matchedRecHit_n,weight );
+        if( matchedRecHit_n > 0 ) p1_matchedRecHit_eff_vs_phi[Ethr][std::make_pair(ptRanges.at(bin_pt-1),ptRanges.at(bin_pt))] -> Fill( 1.,phi_atBTL );
+        else                      p1_matchedRecHit_eff_vs_phi[Ethr][std::make_pair(ptRanges.at(bin_pt-1),ptRanges.at(bin_pt))] -> Fill( 0.,phi_atBTL );
+        if( matchedRecHit_n > 0 ) p1_matchedRecHit_eff_vs_phiFold[Ethr][std::make_pair(ptRanges.at(bin_pt-1),ptRanges.at(bin_pt))] -> Fill( 1.,phi_atBTL_fold );
+        else                      p1_matchedRecHit_eff_vs_phiFold[Ethr][std::make_pair(ptRanges.at(bin_pt-1),ptRanges.at(bin_pt))] -> Fill( 0.,phi_atBTL_fold );
         
-        h1_matchedRecHit_totEnergy[Ethr][std::make_pair(ptRanges.at(bin-1),ptRanges.at(bin))] -> Fill( matchedRecHit_totEnergy );
+        h1_matchedRecHit_totEnergy[Ethr][std::make_pair(ptRanges.at(bin_pt-1),ptRanges.at(bin_pt))] -> Fill( matchedRecHit_totEnergy,weight );
         
-        if( matchedRecHit_totEnergy > 2.75 )
+        if( matchedRecHit_totEnergy > 2.00 )
         {
-          p1_matchedRecHit_totEnergy_vs_eta[Ethr][std::make_pair(ptRanges.at(bin-1),ptRanges.at(bin))] -> Fill( fabs(eta_atBTL),matchedRecHit_totEnergy );
-          p1_matchedRecHit_avgEnergy_vs_eta[Ethr][std::make_pair(ptRanges.at(bin-1),ptRanges.at(bin))] -> Fill( fabs(eta_atBTL),matchedRecHit_totEnergy/matchedRecHit_n );
-          p1_matchedRecHit_maxEnergy_vs_eta[Ethr][std::make_pair(ptRanges.at(bin-1),ptRanges.at(bin))] -> Fill( fabs(eta_atBTL),matchedRecHit_maxEnergy );
-          p1_matchedRecHit_maxOverTotEnergy_vs_eta[Ethr][std::make_pair(ptRanges.at(bin-1),ptRanges.at(bin))] -> Fill( fabs(eta_atBTL),matchedRecHit_maxEnergy/matchedRecHit_totEnergy );
+          p1_matchedRecHit_totEnergy_vs_eta[Ethr][std::make_pair(ptRanges.at(bin_pt-1),ptRanges.at(bin_pt))] -> Fill( fabs(eta_atBTL),matchedRecHit_totEnergy,weight_pt );
+          p1_matchedRecHit_avgEnergy_vs_eta[Ethr][std::make_pair(ptRanges.at(bin_pt-1),ptRanges.at(bin_pt))] -> Fill( fabs(eta_atBTL),matchedRecHit_totEnergy/matchedRecHit_n,weight_pt );
+          p1_matchedRecHit_maxEnergy_vs_eta[Ethr][std::make_pair(ptRanges.at(bin_pt-1),ptRanges.at(bin_pt))] -> Fill( fabs(eta_atBTL),matchedRecHit_maxEnergy,weight_pt );
+          p1_matchedRecHit_maxOverTotEnergy_vs_eta[Ethr][std::make_pair(ptRanges.at(bin_pt-1),ptRanges.at(bin_pt))] -> Fill( fabs(eta_atBTL),matchedRecHit_maxEnergy/matchedRecHit_totEnergy,weight_pt );
 
-          p1_matchedRecHit_timeRes_vs_eta_totEnergy[Ethr][std::make_pair(ptRanges.at(bin-1),ptRanges.at(bin))] -> Fill( fabs(eta_atBTL),sigmaT_totEnergy );
-          p1_matchedRecHit_timeRes_vs_eta_maxEnergy[Ethr][std::make_pair(ptRanges.at(bin-1),ptRanges.at(bin))] -> Fill( fabs(eta_atBTL),sigmaT_maxEnergy );
-          p1_matchedRecHit_timeRes_vs_eta_sumEnergy[Ethr][std::make_pair(ptRanges.at(bin-1),ptRanges.at(bin))] -> Fill( fabs(eta_atBTL),sigmaT_sumEnergy );
+          p1_matchedRecHit_timeRes_vs_eta_totEnergy[Ethr][std::make_pair(ptRanges.at(bin_pt-1),ptRanges.at(bin_pt))] -> Fill( fabs(eta_atBTL),sigmaT_totEnergy,weight_pt );
+          p1_matchedRecHit_timeRes_vs_eta_maxEnergy[Ethr][std::make_pair(ptRanges.at(bin_pt-1),ptRanges.at(bin_pt))] -> Fill( fabs(eta_atBTL),sigmaT_maxEnergy,weight_pt );
+          p1_matchedRecHit_timeRes_vs_eta_sumEnergy[Ethr][std::make_pair(ptRanges.at(bin_pt-1),ptRanges.at(bin_pt))] -> Fill( fabs(eta_atBTL),sigmaT_sumEnergy,weight_pt );
           
-          p1_matchedRecHit_totEnergy_vs_phi[Ethr][std::make_pair(ptRanges.at(bin-1),ptRanges.at(bin))] -> Fill( phi_atBTL,matchedRecHit_totEnergy );
-          p1_matchedRecHit_avgEnergy_vs_phi[Ethr][std::make_pair(ptRanges.at(bin-1),ptRanges.at(bin))] -> Fill( phi_atBTL,matchedRecHit_totEnergy/matchedRecHit_n );
+          p1_matchedRecHit_totEnergy_vs_phi[Ethr][std::make_pair(ptRanges.at(bin_pt-1),ptRanges.at(bin_pt))] -> Fill( phi_atBTL,matchedRecHit_totEnergy,weight );
+          p1_matchedRecHit_avgEnergy_vs_phi[Ethr][std::make_pair(ptRanges.at(bin_pt-1),ptRanges.at(bin_pt))] -> Fill( phi_atBTL,matchedRecHit_totEnergy/matchedRecHit_n,weight );
         }
       } // end loop over Ethr
       
     } // end loop over tracks
     
     h1_tracks_n -> Fill( nGoodTracks );
-
+    
     
     // if( entry%200 == 0 && entry > 0 )
     // {
@@ -864,6 +1067,11 @@ int main(int argc, char** argv)
   
   
   outFile -> cd();
+
+  double xAxis2_Ethr[201];
+  xAxis2_Ethr[0] = pow(10.,-2.005);
+  for(int jj = 1; jj <= 200; ++jj)
+    xAxis2_Ethr[jj] = pow(10.,-2.005+3./200.*jj);
   
   for(int iRU = 0; iRU < nRUs; ++iRU)
   {
@@ -872,6 +1080,9 @@ int main(int argc, char** argv)
     TGraph* g_simHits_occ_vs_RU_energyCut = new TGraph();
     TGraph* g_simHits_PU200_occ_vs_RU_energyCut = new TGraph();
 
+    TGraph* g_simHits_OOT_n_vs_RU_energyCut = new TGraph();
+    TEfficiency* g_simHits_OOT_occ_vs_RU_energyCut = new TEfficiency("g_simHits_OOT_occ_vs_RU_energyCut","",200,xAxis2_Ethr);
+    
     TGraph* g_recHits_n_vs_RU_energyCut = new TGraph();
     TGraph* g_recHits_PU200_n_vs_RU_energyCut = new TGraph();
     TGraph* g_recHits_occ_vs_RU_energyCut = new TGraph();
@@ -886,6 +1097,11 @@ int main(int argc, char** argv)
       g_simHits_occ_vs_RU_energyCut -> SetPoint(jj,cut,1.*simHits_n_vs_RU_energyCut[cut][iRU]/nEntries/(nCrystalsPerMatrix*nMatricesPerMod*nModsPerType*3*nTrays/nRUs));
       g_simHits_PU200_occ_vs_RU_energyCut -> SetPoint(jj,cut,200.*simHits_n_vs_RU_energyCut[cut][iRU]/nEntries/(nCrystalsPerMatrix*nMatricesPerMod*nModsPerType*3*nTrays/nRUs));
       
+      g_simHits_OOT_n_vs_RU_energyCut -> SetPoint(jj,cut,1.*simHits_OOT_n_vs_RU_energyCut[cut][iRU]/nEntries_OOT);
+      // g_simHits_OOT_occ_vs_RU_energyCut -> SetPoint(jj,cut,1.*simHits_OOT_n_vs_RU_energyCut[cut][iRU]/nEntries_OOT/(nCrystalsPerMatrix*nMatricesPerMod*nModsPerType*3*nTrays/nRUs));
+      g_simHits_OOT_occ_vs_RU_energyCut -> SetTotalEvents(jj,1.*nEntries_OOT*nCrystalsPerMatrix*nMatricesPerMod*nModsPerType*3*nTrays/nRUs);
+      g_simHits_OOT_occ_vs_RU_energyCut -> SetPassedEvents(jj,1.*simHits_OOT_n_vs_RU_energyCut[cut][iRU]);
+      
       g_recHits_n_vs_RU_energyCut -> SetPoint(jj,cut,1.*recHits_n_vs_RU_energyCut[cut][iRU]/nEntries);
       g_recHits_PU200_n_vs_RU_energyCut -> SetPoint(jj,cut,200.*recHits_n_vs_RU_energyCut[cut][iRU]/nEntries);
       g_recHits_occ_vs_RU_energyCut -> SetPoint(jj,cut,1.*recHits_n_vs_RU_energyCut[cut][iRU]/nEntries/(nCrystalsPerMatrix*nMatricesPerMod*nModsPerType*3*nTrays/nRUs));
@@ -897,6 +1113,9 @@ int main(int argc, char** argv)
     g_simHits_occ_vs_RU_energyCut -> Write(Form("g_simHits_occ_vs_RU_energyCut_RU%d",iRU));
     g_simHits_PU200_occ_vs_RU_energyCut -> Write(Form("g_simHits_PU200_occ_vs_RU_energyCut_RU%d",iRU));
     
+    g_simHits_OOT_n_vs_RU_energyCut -> Write(Form("g_simHits_OOT_n_vs_RU_energyCut_RU%d",iRU));
+    // g_simHits_OOT_occ_vs_RU_energyCut -> Write(Form("g_simHits_OOT_occ_vs_RU_energyCut_RU%d",iRU));
+      
     g_recHits_n_vs_RU_energyCut -> Write(Form("g_recHits_n_vs_RU_energyCut_RU%d",iRU));
     g_recHits_PU200_n_vs_RU_energyCut -> Write(Form("g_recHits_PU200_n_vs_RU_energyCut_RU%d",iRU));
     g_recHits_occ_vs_RU_energyCut -> Write(Form("g_recHits_occ_vs_RU_energyCut_RU%d",iRU));
@@ -915,3 +1134,4 @@ int main(int argc, char** argv)
   std::cout << "============================================"  << std::endl;
 
 }
+

@@ -1,18 +1,18 @@
 void drawGeometryControlPlots(const std::string& inFileName)
 {
   TFile* inFile = TFile::Open(inFileName.c_str(),"READ");
-  TTree* t = (TTree*)( inFile->Get("FTLDumpHits/hits_tree"));
+  TTree* t = (TTree*)( inFile->Get("FTLDumpHits/DumpHits"));
   
   
 
   // std::string label = "tile";
   // TLatex* latexLabel = new TLatex(0.16,0.96,Form("11.5#times11.5#timesd mm^{3} tiles"));
-  // std::string label = "barphi";
-  // TLatex* latexLabel = new TLatex(0.16,0.96,Form("3#times50#timesd mm^{3} bars along #phi"));
+  std::string label = "barphi";
+  TLatex* latexLabel = new TLatex(0.16,0.96,Form("3#times50#timesd mm^{3} bars along #phi"));
   // std::string label = "barz";
   // TLatex* latexLabel = new TLatex(0.16,0.96,Form("3#times50#timesd mm^{3} bars along z"));
-  std::string label = "barzflat";
-  TLatex* latexLabel = new TLatex(0.16,0.96,Form("3#times56#timesd mm^{3} flat bars along z"));
+  // std::string label = "barzflat";
+  // TLatex* latexLabel = new TLatex(0.16,0.96,Form("3#times56#timesd mm^{3} flat bars along z"));
   latexLabel -> SetNDC();
   latexLabel -> SetTextFont(42);
   latexLabel -> SetTextSize(0.03);
@@ -25,10 +25,10 @@ void drawGeometryControlPlots(const std::string& inFileName)
   c1 -> cd(1);
   gPad -> SetLogy();
   TH1F* h_entry_x = new TH1F("h_entry_x","",30000,-3.,3.);
-  t -> Draw("simHits_entry_local_x>>h_entry_x","","goff");
+  t -> Draw("simHits_entry_local_x>>h_entry_x","simHits_det == 1","goff");
   h_entry_x -> SetTitle(";simHit entry/exit point x (cm);entries");
   h_entry_x -> Draw();
-  TH1F* h_exit_x = new TH1F("h_exit_x","",30000,-3.,3.);
+  TH1F* h_exit_x = new TH1F("h_exit_x","simHits_det == 1",30000,-3.,3.);
   t -> Draw("simHits_exit_local_x>>h_exit_x","","goff");
   h_exit_x -> SetLineColor(kRed);
   h_exit_x -> Draw("same");
@@ -37,23 +37,23 @@ void drawGeometryControlPlots(const std::string& inFileName)
   c1 -> cd(2);
   gPad -> SetLogy();
   TH1F* h_entry_y = new TH1F("h_entry_y","",30000,-3.,3.);
-  t -> Draw("simHits_entry_local_y>>h_entry_y","","goff");
+  t -> Draw("simHits_entry_local_y>>h_entry_y","simHits_det == 1","goff");
   h_entry_y -> SetTitle(";simHit entry/exit point y (cm);entries");
   h_entry_y -> Draw();
   TH1F* h_exit_y = new TH1F("h_exit_y","",30000,-3.,3.);
-  t -> Draw("simHits_exit_local_y>>h_exit_y","","goff");
+  t -> Draw("simHits_exit_local_y>>h_exit_y","simHits_det == 1","goff");
   h_exit_y -> SetLineColor(kRed);
   h_exit_y -> Draw("same");
   latexLabel -> Draw("same");
   
   c1 -> cd(3);
   gPad -> SetLogy();
-  TH1F* h_entry_z = new TH1F("h_entry_z","",10000,-0.5,0.5);
-  t -> Draw("simHits_entry_local_z>>h_entry_z","","goff");
+  TH1F* h_entry_z = new TH1F("h_entry_z","",20000,-0.5,0.5);
+  t -> Draw("simHits_entry_local_z>>h_entry_z","simHits_det == 1","goff");
   h_entry_z -> SetTitle(";simHit entry/exit point z (cm);entries");
   h_entry_z -> Draw();
-  TH1F* h_exit_z = new TH1F("h_exit_z","",10000,-0.5,0.5);
-  t -> Draw("simHits_exit_local_z>>h_exit_z","","goff");
+  TH1F* h_exit_z = new TH1F("h_exit_z","",20000,-0.5,0.5);
+  t -> Draw("simHits_exit_local_z>>h_exit_z","simHits_det == 1","goff");
   h_exit_z -> SetLineColor(kRed);
   h_exit_z -> Draw("same");
   latexLabel -> Draw("same");
