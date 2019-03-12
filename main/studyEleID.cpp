@@ -93,6 +93,7 @@ int main(int argc, char** argv)
   float sieie;
   float sipip;
   float fabsEta;
+  
   TTree* outTree = new TTree("outTree","outTree");
   outTree -> Branch("eventId",    &eventId,        "eventId/F");
   outTree -> Branch("isSig",      &isSig,            "isSig/F");
@@ -105,6 +106,41 @@ int main(int argc, char** argv)
   outTree -> Branch("sieie",      &sieie,            "sieie/F");
   outTree -> Branch("sipip",      &sipip,            "sipip/F");
   outTree -> Branch("fabsEta",    &fabsEta,        "fabsEta/F");  
+  
+  float ele_fbrem;
+  float ele_gsfHits;
+  float ele_gsfChi2;
+  float ele_ctfHits;
+  float ele_ctfChi2;
+  float ele_sieie;
+  float ele_sipip;
+  float ele_circ;
+  float ele_r9;
+  float ele_etaw;
+  float ele_phiw;
+  float ele_hoe;
+  float ele_eop;
+  float ele_eseedopout;
+  float ele_detain;
+  float ele_dphiin;
+  float ele_trackreliso;
+  outTree -> Branch("ele_fbrem",      &ele_fbrem,            "ele_fbrem/F");
+  outTree -> Branch("ele_gsfHits",    &ele_gsfHits,        "ele_gsfHits/F");
+  outTree -> Branch("ele_gsfChi2",    &ele_gsfChi2,        "ele_gsfChi2/F");
+  outTree -> Branch("ele_ctfHits",    &ele_ctfHits,        "ele_ctfHits/F");
+  outTree -> Branch("ele_ctfChi2",    &ele_ctfChi2,        "ele_ctfChi2/F");
+  outTree -> Branch("ele_sieie",      &ele_sieie,            "ele_sieie/F");
+  outTree -> Branch("ele_sipip",      &ele_sipip,            "ele_sipip/F");
+  outTree -> Branch("ele_circ",       &ele_circ,              "ele_circ/F");
+  outTree -> Branch("ele_r9",         &ele_r9,                  "ele_r9/F");
+  outTree -> Branch("ele_etaw",       &ele_etaw,              "ele_etaw/F");
+  outTree -> Branch("ele_phiw",       &ele_phiw,              "ele_phiw/F");
+  outTree -> Branch("ele_hoe",        &ele_hoe,                "ele_hoe/F");
+  outTree -> Branch("ele_eop",        &ele_eop,                "ele_eop/F");
+  outTree -> Branch("ele_eseedopout", &ele_eseedopout,      "ele_eopout/F");
+  outTree -> Branch("ele_detain",     &ele_detain,          "ele_detain/F");
+  outTree -> Branch("ele_dphiin",     &ele_dphiin,          "ele_dphiin/F");
+  outTree -> Branch("ele_trackreliso",&ele_trackreliso,"ele_trackreliso/F");
   
   
   
@@ -123,37 +159,62 @@ int main(int argc, char** argv)
   varMap["sieie"] = &sieie;
   varMap["sipip"] = &sipip;
   varMap["fabsEta"] = &fabsEta;
+  varMap["ele_fbrem"] = &ele_fbrem;
+  varMap["ele_gsfHits"] = &ele_gsfHits;
+  varMap["ele_gsfChi2"] = &ele_gsfChi2;
+  varMap["ele_ctfHits"] = &ele_ctfHits;
+  varMap["ele_ctfChi2"] = &ele_ctfChi2;
+  varMap["ele_sieie"] = &ele_sieie;
+  varMap["ele_sipip"] = &ele_sipip;
+  varMap["ele_circ"] = &ele_circ;
+  varMap["ele_r9"] = &ele_r9;
+  varMap["ele_etaw"] = &ele_etaw;
+  varMap["ele_phiw"] = &ele_phiw;
+  varMap["ele_hoe"] = &ele_hoe;
+  varMap["ele_eop"] = &ele_eop;
+  varMap["ele_eseedopout"] = &ele_eseedopout;
+  varMap["ele_detain"] = &ele_detain;
+  varMap["ele_dphiin"] = &ele_dphiin;
+  varMap["ele_trackreliso"] = &ele_trackreliso;
   
-  std::vector<std::string> diphoMVA_labels = opts.GetOpt<std::vector<std::string> >("Input.diphoMVA_labels");
-  std::map<std::string,TMVA::Reader*> diphoMVAReaders;
-  std::map<std::string,std::string> diphoMVA_methods;
-  for(unsigned int ii = 0; ii < diphoMVA_labels.size(); ++ii)
+  std::vector<std::string> MVA_labels = opts.GetOpt<std::vector<std::string> >("Input.MVA_labels");
+  std::map<std::string,TMVA::Reader*> MVAReaders;
+  std::map<std::string,std::string> MVA_methods;
+  for(unsigned int ii = 0; ii < MVA_labels.size(); ++ii)
   {
-    std::string diphoMVA_label = diphoMVA_labels.at(ii);
+    std::string MVA_label = MVA_labels.at(ii);
 
-    diphoMVA_methods[diphoMVA_label] = opts.GetOpt<std::string>(Form("Input.%s.method",diphoMVA_label.c_str()));
-    std::string weightsFile = opts.GetOpt<std::string>(Form("Input.%s.weightsFile",diphoMVA_label.c_str()));
-    std::vector<std::string> inputVariables = opts.GetOpt<std::vector<std::string> >(Form("Input.%s.inputVariables",diphoMVA_label.c_str()));
+    MVA_methods[MVA_label] = opts.GetOpt<std::string>(Form("Input.%s.method",MVA_label.c_str()));
+    std::string weightsFile = opts.GetOpt<std::string>(Form("Input.%s.weightsFile",MVA_label.c_str()));
+    std::vector<std::string> inputVariables = opts.GetOpt<std::vector<std::string> >(Form("Input.%s.inputVariables",MVA_label.c_str()));
 
-    diphoMVAReaders[diphoMVA_label] = new TMVA::Reader( "!Color:!Silent" );
+    MVAReaders[MVA_label] = new TMVA::Reader( "!Color:!Silent" );
 
     for(unsigned int jj = 0; jj < inputVariables.size(); ++jj)
     {
       std::string inputVariable = inputVariables.at(jj);
-      diphoMVAReaders[diphoMVA_label] -> AddVariable(inputVariable.c_str(),varMap[inputVariable.c_str()]);
+      MVAReaders[MVA_label] -> AddVariable(inputVariable.c_str(),varMap[inputVariable.c_str()]);
     }
 
-    diphoMVAReaders[diphoMVA_label] -> BookMVA( diphoMVA_methods[diphoMVA_label],weightsFile.c_str() );
+    MVAReaders[MVA_label] -> BookMVA( MVA_methods[MVA_label],weightsFile.c_str() );
   }
 
 
   
   //--- loop over samples
-  std::map<std::string,std::map<float,int> > ROC_nEvents_EB;
-  std::map<std::string,std::map<float,int> > ROC2_nEvents_EB;
-
-  std::map<std::string,std::map<float,int> > ROC_nEvents_EE;
-  std::map<std::string,std::map<float,int> > ROC2_nEvents_EE;
+  std::vector<std::string> MVALabels_EB;
+  MVALabels_EB.push_back("eleID_MTDOnly_EB");
+  MVALabels_EB.push_back("eleID_eleOnlyNoIso_EB");
+  MVALabels_EB.push_back("eleID_eleOnlyIso_EB");
+  MVALabels_EB.push_back("eleID_eleMTDNoIso_EB");
+  MVALabels_EB.push_back("eleID_eleMTDIso_EB");
+  
+  std::vector<std::string> MVALabels_EE;
+  MVALabels_EE.push_back("eleID_MTDOnly_EE");
+  
+  std::map<std::string,std::map<std::string,std::map<float,int> > > ROC_nEvents_EB;
+  std::map<std::string,std::map<std::string,std::map<float,int> > > ROC_nEvents_EE;
+  
   
   for(int inFileIt = 0; inFileIt < int(inFileNames.size()/2); ++inFileIt)
   {
@@ -163,30 +224,78 @@ int main(int argc, char** argv)
 
     
     //--- get tree
-    TFile* inFile = TFile::Open(inFileName.c_str(),"READ");
-    TTree* tree = (TTree*)( inFile->Get("FTLDumpElectrons/DumpElectrons") );
+    TChain* tree = new TChain("FTLDumpElectrons/DumpElectrons","FTLDumpElectrons/DumpElectrons");
+    tree -> Add((inFileName+"*.root").c_str());
+    
     tree -> SetBranchStatus("*",0);
     
     std::vector<float>* electrons_pt  = new std::vector<float>;
     std::vector<float>* electrons_eta = new std::vector<float>;
     std::vector<float>* electrons_phi = new std::vector<float>;
     std::vector<float>* electrons_mva = new std::vector<float>;
+    std::vector<float>* electrons_t = new std::vector<float>;
+    std::vector<float>* electrons_pathLength = new std::vector<float>;
+    std::vector<float>* electrons_t_atBTL = new std::vector<float>;
     std::vector<float>* electrons_eta_atBTL = new std::vector<float>;
     std::vector<float>* electrons_phi_atBTL = new std::vector<float>;
     std::vector<float>* electrons_eta_atETL = new std::vector<float>;
     std::vector<float>* electrons_phi_atETL = new std::vector<float>;
     std::vector<float>* electrons_mcMatch_genPt = new std::vector<float>;
     std::vector<float>* electrons_mcMatch_DR = new std::vector<float>;
+    std::vector<float>* electrons_trackIso = new std::vector<float>;
     tree -> SetBranchStatus("electrons_pt",           1); tree -> SetBranchAddress("electrons_pt",           &electrons_pt);
     tree -> SetBranchStatus("electrons_eta",          1); tree -> SetBranchAddress("electrons_eta",          &electrons_eta);
     tree -> SetBranchStatus("electrons_phi",          1); tree -> SetBranchAddress("electrons_phi",          &electrons_phi);
     tree -> SetBranchStatus("electrons_mva",          1); tree -> SetBranchAddress("electrons_mva",          &electrons_mva);
+    tree -> SetBranchStatus("electrons_t",            1); tree -> SetBranchAddress("electrons_t",            &electrons_t);
+    tree -> SetBranchStatus("electrons_pathLength",   1); tree -> SetBranchAddress("electrons_pathLength",   &electrons_pathLength);
+    tree -> SetBranchStatus("electrons_t_atBTL",      1); tree -> SetBranchAddress("electrons_t_atBTL",      &electrons_t_atBTL);
     tree -> SetBranchStatus("electrons_eta_atBTL",    1); tree -> SetBranchAddress("electrons_eta_atBTL",    &electrons_eta_atBTL);
     tree -> SetBranchStatus("electrons_phi_atBTL",    1); tree -> SetBranchAddress("electrons_phi_atBTL",    &electrons_phi_atBTL);
     tree -> SetBranchStatus("electrons_eta_atETL",    1); tree -> SetBranchAddress("electrons_eta_atETL",    &electrons_eta_atETL);
     tree -> SetBranchStatus("electrons_phi_atETL",    1); tree -> SetBranchAddress("electrons_phi_atETL",    &electrons_phi_atETL);
     tree -> SetBranchStatus("electrons_mcMatch_genPt",1); tree -> SetBranchAddress("electrons_mcMatch_genPt",&electrons_mcMatch_genPt);
     tree -> SetBranchStatus("electrons_mcMatch_DR",   1); tree -> SetBranchAddress("electrons_mcMatch_DR",   &electrons_mcMatch_DR);
+    tree -> SetBranchStatus("electrons_trackIso",     1); tree -> SetBranchAddress("electrons_trackIso",     &electrons_trackIso);
+    
+    std::vector<float>* electrons_fbrem = new std::vector<float>;
+    std::vector<float>* electrons_gsfHits = new std::vector<float>;
+    std::vector<float>* electrons_gsfChi2 = new std::vector<float>;
+    std::vector<float>* electrons_ctfHits = new std::vector<float>;
+    std::vector<float>* electrons_ctfChi2 = new std::vector<float>;
+    std::vector<float>* electrons_dEtaIn = new std::vector<float>;
+    std::vector<float>* electrons_dPhiIn = new std::vector<float>;
+    std::vector<float>* electrons_eop = new std::vector<float>;
+    std::vector<float>* electrons_eSeedOPout = new std::vector<float>;
+    std::vector<float>* electrons_sigmaEtaEta = new std::vector<float>;
+    std::vector<float>* electrons_sigmaIetaIeta = new std::vector<float>;
+    std::vector<float>* electrons_sigmaIphiIphi = new std::vector<float>;
+    std::vector<float>* electrons_e1x5 = new std::vector<float>;
+    std::vector<float>* electrons_e2x5Max = new std::vector<float>;
+    std::vector<float>* electrons_e5x5 = new std::vector<float>;
+    std::vector<float>* electrons_r9 = new std::vector<float>;
+    std::vector<float>* electrons_etaWidth = new std::vector<float>;
+    std::vector<float>* electrons_phiWidth = new std::vector<float>;
+    std::vector<float>* electrons_hcalOverEcal = new std::vector<float>;
+    tree -> SetBranchStatus("electrons_fbrem",1); tree -> SetBranchAddress("electrons_fbrem",&electrons_fbrem);
+    tree -> SetBranchStatus("electrons_gsfHits",1); tree -> SetBranchAddress("electrons_gsfHits",&electrons_gsfHits);
+    tree -> SetBranchStatus("electrons_gsfChi2",1); tree -> SetBranchAddress("electrons_gsfChi2",&electrons_gsfChi2);
+    tree -> SetBranchStatus("electrons_ctfHits",1); tree -> SetBranchAddress("electrons_ctfHits",&electrons_ctfHits);
+    tree -> SetBranchStatus("electrons_ctfChi2",1); tree -> SetBranchAddress("electrons_ctfChi2",&electrons_ctfChi2);
+    tree -> SetBranchStatus("electrons_dEtaIn",1); tree -> SetBranchAddress("electrons_dEtaIn",&electrons_dEtaIn);
+    tree -> SetBranchStatus("electrons_dPhiIn",1); tree -> SetBranchAddress("electrons_dPhiIn",&electrons_dPhiIn);
+    tree -> SetBranchStatus("electrons_eop",1); tree -> SetBranchAddress("electrons_eop",&electrons_eop);
+    tree -> SetBranchStatus("electrons_eSeedOPout",1); tree -> SetBranchAddress("electrons_eSeedOPout",&electrons_eSeedOPout);
+    tree -> SetBranchStatus("electrons_sigmaEtaEta",1); tree -> SetBranchAddress("electrons_sigmaEtaEta",&electrons_sigmaEtaEta);
+    tree -> SetBranchStatus("electrons_sigmaIetaIeta",1); tree -> SetBranchAddress("electrons_sigmaIetaIeta",&electrons_sigmaIetaIeta);
+    tree -> SetBranchStatus("electrons_sigmaIphiIphi",1); tree -> SetBranchAddress("electrons_sigmaIphiIphi",&electrons_sigmaIphiIphi);
+    tree -> SetBranchStatus("electrons_e1x5",1); tree -> SetBranchAddress("electrons_e1x5",&electrons_e1x5);
+    tree -> SetBranchStatus("electrons_e2x5Max",1); tree -> SetBranchAddress("electrons_e2x5Max",&electrons_e2x5Max);
+    tree -> SetBranchStatus("electrons_e5x5",1); tree -> SetBranchAddress("electrons_e5x5",&electrons_e5x5);
+    tree -> SetBranchStatus("electrons_r9",1); tree -> SetBranchAddress("electrons_r9",&electrons_r9);
+    tree -> SetBranchStatus("electrons_etaWidth",1); tree -> SetBranchAddress("electrons_etaWidth",&electrons_etaWidth);
+    tree -> SetBranchStatus("electrons_phiWidth",1); tree -> SetBranchAddress("electrons_phiWidth",&electrons_phiWidth);
+    tree -> SetBranchStatus("electrons_hcalOverEcal",1); tree -> SetBranchAddress("electrons_hcalOverEcal",&electrons_hcalOverEcal);
     
     std::vector<std::vector<int> >*   matchedRecHits_det = new std::vector<std::vector<int> >;
     std::vector<std::vector<float> >* matchedRecHits_time = new std::vector<std::vector<float> >;
@@ -216,6 +325,12 @@ int main(int argc, char** argv)
     TH1F* h1_electrons_phi_atBTL = new TH1F(Form("h1_%s_electrons_phi_atBTL",label.c_str()),"",nPhiBins,phiMin,phiMax);
     TH1F* h1_electrons_eta_atETL = new TH1F(Form("h1_%s_electrons_eta_atETL",label.c_str()),"",nEtaBins,etaMin,etaMax);
     TH1F* h1_electrons_phi_atETL = new TH1F(Form("h1_%s_electrons_phi_atETL",label.c_str()),"",nPhiBins,phiMin,phiMax);
+    TH1F* h1_electrons_t_BTL = new TH1F(Form("h1_%s_electrons_t_BTL",label.c_str()),"",1000.,-1.,1.);
+    TH1F* h1_electrons_pathLength_BTL = new TH1F(Form("h1_%s_electrons_pathLength_BTL",label.c_str()),"",1000.,0.,500.);
+    TH1F* h1_electrons_t_ETL = new TH1F(Form("h1_%s_electrons_t_ETL",label.c_str()),"",1000.,-1.,1.);
+    TH1F* h1_electrons_pathLength_ETL = new TH1F(Form("h1_%s_electrons_pathLength_ETL",label.c_str()),"",1000.,0.,500.);
+    TH1F* h1_electrons_trackRelIso_BTL = new TH1F(Form("h1_%s_electrons_trackRelIso_BTL",label.c_str()),"",10000.,0.,10.);
+    TH1F* h1_electrons_trackRelIso_ETL = new TH1F(Form("h1_%s_electrons_trackRelIso_ETL",label.c_str()),"",10000.,0.,10.);
     
     TH1F* h1_recHits_energy = new TH1F(Form("h1_%s_recHit_energy",label.c_str()),"",1000,0.,100.);
     TH1F* h1_recHits_time = new TH1F(Form("h1_%s_recHit_time",label.c_str()),"",500,-10.,40.);
@@ -277,18 +392,57 @@ int main(int argc, char** argv)
         float eta_atETL = electrons_eta_atETL->at(eleIt);
         float phi_atETL = electrons_phi_atETL->at(eleIt);
         float mcMatch_DR = electrons_mcMatch_DR->at(eleIt);
-
+        float t = electrons_t->at(eleIt);
+        float t_atBTL = electrons_t_atBTL->at(eleIt);
+        float pathLength = electrons_pathLength->at(eleIt);
+        
+        ele_fbrem = electrons_fbrem->at(eleIt);
+        ele_gsfHits = electrons_gsfHits->at(eleIt);
+        ele_gsfChi2 = electrons_gsfChi2->at(eleIt);
+        ele_ctfHits = electrons_ctfHits->at(eleIt);
+        ele_ctfChi2 = electrons_ctfChi2->at(eleIt);
+        ele_sieie = electrons_sigmaIetaIeta->at(eleIt);
+        ele_sipip = electrons_sigmaIphiIphi->at(eleIt);
+        ele_circ = (electrons_e5x5->at(eleIt) != 0.) ? 1.-electrons_e1x5->at(eleIt)/electrons_e5x5->at(eleIt) : -1.;
+        ele_r9 = electrons_r9->at(eleIt);
+        ele_etaw = electrons_etaWidth->at(eleIt);
+        ele_phiw = electrons_phiWidth->at(eleIt);
+        ele_hoe = electrons_hcalOverEcal->at(eleIt);
+        ele_eop = electrons_eop->at(eleIt);
+        ele_eseedopout = electrons_eSeedOPout->at(eleIt);
+        ele_detain = electrons_dEtaIn->at(eleIt);
+        ele_dphiin = electrons_dPhiIn->at(eleIt);
+        ele_trackreliso = electrons_trackIso->at(eleIt)/pt;
+        if( t == -999. ) t_atBTL += 999.;
+        
         fabsEta = fabs(eta);
         mva = electrons_mva->at(eleIt);
         if( mva < -1 ) continue;
         // if( eta_atBTL > -100. && mva <  0.6 ) continue;
         // if( eta_atETL > -100. && mva < -0.2 ) continue;
         
-        isSig = label=="prompt" ? 1 : 0;
+        isSig = (label=="prompt" || label=="promptNoPU") ? 1 : 0;
         
         if( pt < 20. ) continue;
         if( isSig && mcMatch_DR > 0.05) continue;
         if( !isSig && mcMatch_DR < 100. ) continue;
+        
+        if( eta_atBTL > -100. && ele_r9 > -100. )
+        {
+          h1_electrons_t_BTL -> Fill( electrons_t->at(eleIt));
+          h1_electrons_pathLength_BTL -> Fill( electrons_pathLength->at(eleIt) );
+          h1_electrons_trackRelIso_BTL -> Fill( electrons_trackIso->at(eleIt)/pt );
+        }
+        else
+        {
+          h1_electrons_t_ETL -> Fill( electrons_t->at(eleIt));
+          h1_electrons_pathLength_ETL -> Fill( electrons_pathLength->at(eleIt));          
+          h1_electrons_trackRelIso_ETL -> Fill( electrons_trackIso->at(eleIt)/pt );
+        }
+        
+        // if( pathLength < 0. ) continue;
+        // if( t < -100. ) continue;
+        // if( electrons_trackIso->at(eleIt)/pt < 0.10 ) continue;
         
         ++nGoodTracks;
         h1_electrons_pt -> Fill( electrons_pt->at(eleIt) );
@@ -300,9 +454,9 @@ int main(int argc, char** argv)
 
         int etaBin = h1_nEntries_etaRanges -> Fill( fabs(eta) );
         if( etaBin < 1 || etaBin > int(etaRanges.size()) ) continue;
-
+        
         // BTL
-        if( eta_atBTL > -100. )
+        if( eta_atBTL > -100. && ele_r9 > -100. )
         {
           isEB = 1;
           
@@ -311,12 +465,15 @@ int main(int argc, char** argv)
           h1_electrons_mva_BTL -> Fill( electrons_mva->at(eleIt) );
           
           energySeed = 0.;
-          float timeSeed = -1.;
-          int ietaSeed = -1;
-          int iphiSeed = -1;
+          float timeSeed = 0.;
+          int ietaSeed = 0;
+          int iphiSeed = 0;
           for(unsigned int recHitIt = 0; recHitIt < (matchedRecHits_energy->at(eleIt)).size(); ++recHitIt)
           {
             if( (matchedRecHits_det->at(eleIt)).at(recHitIt) != 1 ) continue;
+            
+            float DR = (matchedRecHits_electron_DR->at(eleIt)).at(recHitIt);
+            if( DR > 0.03 ) continue;
             
             float recHitE = (matchedRecHits_energy->at(eleIt)).at(recHitIt);
             float recHitTime = (matchedRecHits_time->at(eleIt)).at(recHitIt);
@@ -342,8 +499,8 @@ int main(int argc, char** argv)
             float recHitE = (matchedRecHits_energy->at(eleIt)).at(recHitIt);
             h1_matchedRecHit_energy_BTL -> Fill( recHitE );
             
-            if( recHitE < 1. ) continue;
-            
+            if( recHitE < 0. ) continue;
+
             float recHitTime = (matchedRecHits_time->at(eleIt)).at(recHitIt);
             h1_matchedRecHit_time_BTL -> Fill( recHitTime-timeSeed );
             p1_matchedRecHit_time_vs_eta -> Fill( fabs(eta),recHitTime );
@@ -357,13 +514,7 @@ int main(int argc, char** argv)
             nRecHits += 1.;
             
             energySum += recHitE;
-            if( (matchedRecHits_modType->at(eleIt)).at(recHitIt) == 1 )
-              energySumCorr += (matchedRecHits_energyCorr->at(eleIt)).at(recHitIt);
-            if( (matchedRecHits_modType->at(eleIt)).at(recHitIt) == 2 )
-              energySumCorr += (matchedRecHits_energyCorr->at(eleIt)).at(recHitIt) * 3.75/3.00;
-            if( (matchedRecHits_modType->at(eleIt)).at(recHitIt) == 3 )
-              energySumCorr += (matchedRecHits_energyCorr->at(eleIt)).at(recHitIt) * 3.75/2.40;
-
+            
             ietaAvg += (matchedRecHits_ieta->at(eleIt)).at(recHitIt)*recHitE;
             iphiAvg += (matchedRecHits_iphi->at(eleIt)).at(recHitIt)*recHitE;
           }
@@ -377,12 +528,9 @@ int main(int argc, char** argv)
           
           sieie = 0.;
           sipip = 0.;
-          if( energySum > 0. )
-          {
-            ietaAvg /= energySum;
-            iphiAvg /= energySum;
-          }
-          
+          ietaAvg /= energySum;
+          iphiAvg /= energySum;
+
           for(unsigned int recHitIt = 0; recHitIt < (matchedRecHits_energy->at(eleIt)).size(); ++recHitIt)
           {
             if( (matchedRecHits_det->at(eleIt)).at(recHitIt) != 1 ) continue;
@@ -391,7 +539,7 @@ int main(int argc, char** argv)
             int iphi = (matchedRecHits_iphi->at(eleIt)).at(recHitIt);
             float recHitE = (matchedRecHits_energy->at(eleIt)).at(recHitIt);
             float recHitTime = (matchedRecHits_time->at(eleIt)).at(recHitIt);
-            if( recHitE < 1. ) continue;
+            if( recHitE < 0. ) continue;
             if( fabs(recHitTime-timeSeed) > 0.1 ) continue;
             
             float DR = (matchedRecHits_electron_DR->at(eleIt)).at(recHitIt);
@@ -410,17 +558,26 @@ int main(int argc, char** argv)
           
           
           // evaluate MVA
-          std::string diphoMVA_label = "eleID_EB";
-          float mva_new = diphoMVAReaders[diphoMVA_label] -> EvaluateMVA(diphoMVA_methods[diphoMVA_label].c_str());
-          
-          for(float val = -1.; val <= 1.; val += 0.01)
+          for(float val = -1.; val <= 1.; val += 0.005)
           {
             if( eta_atBTL > -100 && eta_atETL < -100 )
             {
               if( electrons_mva->at(eleIt) >= val )
-                ROC_nEvents_EB[label][val] += 1;
-              if( mva_new >= val )
-                ROC2_nEvents_EB[label][val] += 1;
+                ROC_nEvents_EB["old"][label][val] += 1;
+            }
+          }
+          
+          for( auto MVA_label : MVALabels_EB )
+          {
+            float mva_new = MVAReaders[MVA_label] -> EvaluateMVA(MVA_methods[MVA_label].c_str());
+            
+            for(float val = -1.; val <= 1.; val += 0.005)
+            {
+              if( eta_atBTL > -100 && eta_atETL < -100 )
+              {
+                if( mva_new >= val )
+                  ROC_nEvents_EB[MVA_label][label][val] += 1;
+              }
             }
           }
           
@@ -430,7 +587,7 @@ int main(int argc, char** argv)
         
         
         // ETL
-        if( eta_atETL > -100. )
+        if( eta_atETL > -100. && ele_r9 < -100. )
         {
           isEB = 0;
           
@@ -445,6 +602,9 @@ int main(int argc, char** argv)
           for(unsigned int recHitIt = 0; recHitIt < (matchedRecHits_energy->at(eleIt)).size(); ++recHitIt)
           {
             if( (matchedRecHits_det->at(eleIt)).at(recHitIt) != 2 ) continue;
+            
+            float DR = (matchedRecHits_electron_DR->at(eleIt)).at(recHitIt);
+            if( DR > 0.02 ) continue;
             
             float recHitE = (matchedRecHits_energy->at(eleIt)).at(recHitIt);
             float recHitTime = (matchedRecHits_time->at(eleIt)).at(recHitIt);
@@ -480,7 +640,7 @@ int main(int argc, char** argv)
             
             float DR = (matchedRecHits_electron_DR->at(eleIt)).at(recHitIt);
             h1_matchedRecHit_electron_DR_ETL -> Fill( DR );
-            if( DR > 0.01 ) continue;
+            if( DR > 0.02 ) continue;
 
             nRecHits += 1.;
             
@@ -514,7 +674,7 @@ int main(int argc, char** argv)
             if( fabs(recHitTime-timeSeed) > 0.1 ) continue;
             
             float DR = (matchedRecHits_electron_DR->at(eleIt)).at(recHitIt);
-            if( DR > 0.01 ) continue;
+            if( DR > 0.02 ) continue;
             
             sieie += recHitE * pow(ieta-ietaAvg,2);
             sipip += recHitE * pow(iphi-iphiAvg,2);
@@ -529,17 +689,26 @@ int main(int argc, char** argv)
           
           
           // evaluate MVA
-          std::string diphoMVA_label = "eleID_EE";
-          float mva_new = diphoMVAReaders[diphoMVA_label] -> EvaluateMVA(diphoMVA_methods[diphoMVA_label].c_str());
-          
-          for(float val = -1.; val <= 1.; val += 0.01)
+          for(float val = -1.; val <= 1.; val += 0.005)
           {
             if( eta_atETL > -100 && eta_atBTL < -100 )
             {
               if( electrons_mva->at(eleIt) >= val )
-                ROC_nEvents_EE[label][val] += 1;
-              if( mva_new >= val )
-                ROC2_nEvents_EE[label][val] += 1;
+                ROC_nEvents_EE["old"][label][val] += 1;
+            }
+          }
+          
+          for( auto MVA_label : MVALabels_EE )
+          {
+            float mva_new = MVAReaders[MVA_label] -> EvaluateMVA(MVA_methods[MVA_label].c_str());
+            
+            for(float val = -1.; val <= 1.; val += 0.005)
+            {
+              if( eta_atETL > -100 && eta_atBTL < -100 )
+              {
+                if( mva_new >= val )
+                  ROC_nEvents_EE[MVA_label][label][val] += 1;
+              }
             }
           }
           
@@ -557,60 +726,69 @@ int main(int argc, char** argv)
     } // end loop over events
     
   } // end loop over samples
-
   
-
+  
+  
   //--- make ROC plots
   TGraph* g_ROC_EB = new TGraph();
   
-  std::map<float,int> ROC_nEvents_EB_ele = ROC_nEvents_EB["prompt"];
-  std::map<float,int> ROC_nEvents_EB_pi  = ROC_nEvents_EB["fake"];
-  for(std::map<float,int>::const_iterator mapIt = ROC_nEvents_EB_ele.begin(); mapIt != ROC_nEvents_EB_ele.end(); ++mapIt)
+  std::map<float,int> ROC_nEvents_EB_prompt = ROC_nEvents_EB["old"]["prompt"];
+  std::map<float,int> ROC_nEvents_EB_fake  = ROC_nEvents_EB["old"]["fake"];
+  for(std::map<float,int>::const_iterator mapIt = ROC_nEvents_EB_prompt.begin(); mapIt != ROC_nEvents_EB_prompt.end(); ++mapIt)
   {
     float val = mapIt->first;
-    g_ROC_EB -> SetPoint(g_ROC_EB->GetN(),1.*ROC_nEvents_EB_ele[val]/ROC_nEvents_EB_ele[-1.],1.*ROC_nEvents_EB_pi[val]/ROC_nEvents_EB_pi[-1.]);
+    g_ROC_EB -> SetPoint(g_ROC_EB->GetN(),1.*ROC_nEvents_EB_prompt[val]/ROC_nEvents_EB_prompt[-1.],1.*ROC_nEvents_EB_fake[val]/ROC_nEvents_EB_fake[-1.]);
   }
 
   g_ROC_EB -> Write("g_ROC_EB");
 
   
-  TGraph* g_ROC2_EB = new TGraph();
-    
-  std::map<float,int> ROC2_nEvents_EB_ele = ROC2_nEvents_EB["prompt"];
-  std::map<float,int> ROC2_nEvents_EB_pi  = ROC2_nEvents_EB["fake"];
-  for(std::map<float,int>::const_iterator mapIt = ROC2_nEvents_EB_ele.begin(); mapIt != ROC2_nEvents_EB_ele.end(); ++mapIt)
+  for( auto MVA_label : MVALabels_EB )
   {
-    float val = mapIt->first;
-    g_ROC2_EB -> SetPoint(g_ROC2_EB->GetN(),1.*ROC2_nEvents_EB_ele[val]/ROC2_nEvents_EB_ele[-1.],1.*ROC2_nEvents_EB_pi[val]/ROC2_nEvents_EB_pi[-1.]);
+    TGraph* g_ROC_new_EB = new TGraph();
+    
+    std::map<float,int> ROC_new_nEvents_EB_prompt = ROC_nEvents_EB[MVA_label]["prompt"];
+    std::map<float,int> ROC_new_nEvents_EB_fake  = ROC_nEvents_EB[MVA_label]["fake"];
+    for(std::map<float,int>::const_iterator mapIt = ROC_new_nEvents_EB_prompt.begin(); mapIt != ROC_new_nEvents_EB_prompt.end(); ++mapIt)
+    {
+      float val = mapIt->first;
+      g_ROC_new_EB -> SetPoint(g_ROC_new_EB->GetN(),1.*ROC_new_nEvents_EB_prompt[val]/ROC_new_nEvents_EB_prompt[-1.],1.*ROC_new_nEvents_EB_fake[val]/ROC_new_nEvents_EB_fake[-1.]);
+    }
+    
+    g_ROC_new_EB -> Write(("g_ROC_"+MVA_label).c_str());
   }
-
-  g_ROC2_EB -> Write("g_ROC2_EB");
-
-
+  
+  
   
   TGraph* g_ROC_EE = new TGraph();
   
-  std::map<float,int> ROC_nEvents_EE_ele = ROC_nEvents_EE["prompt"];
-  std::map<float,int> ROC_nEvents_EE_pi  = ROC_nEvents_EE["fake"];
-  for(std::map<float,int>::const_iterator mapIt = ROC_nEvents_EE_ele.begin(); mapIt != ROC_nEvents_EE_ele.end(); ++mapIt)
+  std::map<float,int> ROC_nEvents_EE_prompt = ROC_nEvents_EE["old"]["prompt"];
+  std::map<float,int> ROC_nEvents_EE_fake  = ROC_nEvents_EE["old"]["fake"];
+  for(std::map<float,int>::const_iterator mapIt = ROC_nEvents_EE_prompt.begin(); mapIt != ROC_nEvents_EE_prompt.end(); ++mapIt)
   {
     float val = mapIt->first;
-    g_ROC_EE -> SetPoint(g_ROC_EE->GetN(),1.*ROC_nEvents_EE_ele[val]/ROC_nEvents_EE_ele[-1.],1.*ROC_nEvents_EE_pi[val]/ROC_nEvents_EE_pi[-1.]);
-  }
-  
-  g_ROC_EE -> Write("g_ROC_EE");
-  
-  TGraph* g_ROC2_EE = new TGraph();
-  
-  std::map<float,int> ROC2_nEvents_EE_ele = ROC2_nEvents_EE["prompt"];
-  std::map<float,int> ROC2_nEvents_EE_pi  = ROC2_nEvents_EE["fake"];
-  for(std::map<float,int>::const_iterator mapIt = ROC2_nEvents_EE_ele.begin(); mapIt != ROC2_nEvents_EE_ele.end(); ++mapIt)
-  {
-    float val = mapIt->first;
-    g_ROC2_EE -> SetPoint(g_ROC2_EE->GetN(),1.*ROC2_nEvents_EE_ele[val]/ROC2_nEvents_EE_ele[-1.],1.*ROC2_nEvents_EE_pi[val]/ROC2_nEvents_EE_pi[-1.]);
+    g_ROC_EE -> SetPoint(g_ROC_EE->GetN(),1.*ROC_nEvents_EE_prompt[val]/ROC_nEvents_EE_prompt[-1.],1.*ROC_nEvents_EE_fake[val]/ROC_nEvents_EE_fake[-1.]);
   }
 
-  g_ROC2_EE -> Write("g_ROC2_EE");
+  g_ROC_EE -> Write("g_ROC_EE");
+
+  
+  for( auto MVA_label : MVALabels_EE )
+  {
+    TGraph* g_ROC_new_EE = new TGraph();
+    
+    std::map<float,int> ROC_new_nEvents_EE_prompt = ROC_nEvents_EE[MVA_label]["prompt"];
+    std::map<float,int> ROC_new_nEvents_EE_fake  = ROC_nEvents_EE[MVA_label]["fake"];
+    for(std::map<float,int>::const_iterator mapIt = ROC_new_nEvents_EE_prompt.begin(); mapIt != ROC_new_nEvents_EE_prompt.end(); ++mapIt)
+    {
+      float val = mapIt->first;
+      g_ROC_new_EE -> SetPoint(g_ROC_new_EE->GetN(),1.*ROC_new_nEvents_EE_prompt[val]/ROC_new_nEvents_EE_prompt[-1.],1.*ROC_new_nEvents_EE_fake[val]/ROC_new_nEvents_EE_fake[-1.]);
+    }
+    
+    g_ROC_new_EE -> Write(("g_ROC_"+MVA_label).c_str());
+  }
+  
+  
   
 
   
