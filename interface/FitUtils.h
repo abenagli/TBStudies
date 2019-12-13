@@ -7,6 +7,7 @@
 
 #include "TH1F.h"
 #include "TH2F.h"
+#include "TGraph.h"
 #include "TF1.h"
 #include "TPad.h"
 #include "TLatex.h"
@@ -67,9 +68,32 @@ void DrawProfile(CfgManager& opts,
                  const int& color, const std::string& drawOpt,
                  TLatex* latexLabel = NULL, TF1* func = NULL, const float& x0 = -999);
 
+void DrawProfile(CfgManager& opts,
+                 const std::string& ch, std::vector<TProfile*> profs,
+                 const std::string& title,
+                 const float& xMin, const float& xMax, const float& yMin, const float& yMax,
+                 const std::vector<int>& colors, const std::string& drawOpt,
+                 TLatex* latexLabel = NULL);
+
 /*** draw 2D profile ***/
 void DrawProfile2D(CfgManager& opts,
                    const std::string& ch, TProfile2D* prof2,
                    const std::string& title,
                    const float& xMin, const float& xMax, const float& yMin, const float& yMax, const float& zMin, const float& zMax,
                    TLatex* latexLabel = NULL, std::vector<TLine*>* lines = NULL);
+
+/*** draw 1D graph ***/
+void DrawGraph(CfgManager& opts,
+               const std::string& ch, TGraph* graph,
+               const std::string& title,
+               const float& xMin, const float& xMax, const float& yMin, const float& yMax,
+               const int& color, const std::string& drawOpt,
+               TLatex* latexLabel = NULL);
+
+/*** draw 1D graph ***/
+void DrawGraph(CfgManager& opts,
+               const std::string& ch, std::vector<TGraph*> graphs,
+               const std::string& title,
+               const float& xMin, const float& xMax, const float& yMin, const float& yMax,
+               const std::vector<int>& colors, const std::string& drawOpt,
+               TLatex* latexLabel = NULL);

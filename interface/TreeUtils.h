@@ -17,6 +17,7 @@ struct TreeVars
   
   float* time;
   float* amp_max;
+  float* b_rms;
   int* nFibresOnX;
   int* nFibresOnY;
   float* hodoX;

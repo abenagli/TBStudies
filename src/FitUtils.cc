@@ -77,7 +77,7 @@ void FindSmallestInterval(float* ret, TH1F* histo, const float& fraction)
   ret[4] = min;
   ret[5] = max;
 
-  std::cout << "mean: " << mean << "   min: " << min << "   max: " << max << std::endl;
+  // std::cout << "mean: " << mean << "   min: " << min << "   max: " << max << std::endl;
 }
 
 
@@ -93,6 +93,7 @@ CTRResult drawCTRPlot(TH1F* histo, const std::string& label, const int& rebin, c
   histo = (TH1F*)( histo->Clone() );
   histo -> Scale(1./histo->Integral());
   histo -> Rebin(rebin);
+  histo -> SetMarkerSize(0.7);
   histo -> SetMarkerStyle(20);
   histo -> SetMarkerColor(kBlack);
   histo -> SetLineColor(kBlack);
@@ -107,8 +108,8 @@ CTRResult drawCTRPlot(TH1F* histo, const std::string& label, const int& rebin, c
   float delta = max-min;
   float sigma = 0.5*delta;
   float effSigma = sigma;
-  min = min - 2.*delta;
-  max = max + 2.*delta;
+  min = min - 5.*delta;
+  max = max + 5.*delta;
   
   histo -> GetXaxis() -> SetRangeUser(min,max);  
   
@@ -174,7 +175,7 @@ CTRResult drawCTRPlot(TH1F* histo, const std::string& label, const int& rebin, c
     histo_center -> Scale(1./histo_center->Integral());
     histo_center -> Rebin(rebin);
     histo_center -> SetMarkerStyle(22);
-    histo_center -> SetMarkerSize(0.7);
+    histo_center -> SetMarkerSize(0.5);
     histo_center -> SetMarkerColor(kRed);
     histo_center -> SetLineColor(kRed);
     histo_center -> Draw("PE,same");
@@ -211,7 +212,7 @@ CTRResult drawCTRPlot(TH1F* histo, const std::string& label, const int& rebin, c
     histo_border = (TH1F*)( histo_border->Clone() );
     histo_border -> Rebin(rebin);
     histo_border -> SetMarkerStyle(23);
-    histo_border -> SetMarkerSize(0.7);
+    histo_border -> SetMarkerSize(0.5);
     histo_border -> SetMarkerColor(kBlue);
     histo_border -> SetLineColor(kBlue);
     histo_border -> Draw("PE,same");
@@ -496,6 +497,38 @@ void DrawProfile(CfgManager& opts,
 
 
 
+void DrawProfile(CfgManager& opts,
+                 const std::string& ch, std::vector<TProfile*> profs,
+                 const std::string& title,
+                 const float& xMin, const float& xMax, const float& yMin, const float& yMax,
+                 const std::vector<int>& colors, const std::string& drawOpt,
+                 TLatex* latexLabel)
+{
+  std::string shortLabel = opts.GetOpt<std::string>(Form("%s.shortLabel",ch.c_str()));
+  
+  gPad -> SetGridy();
+  
+  for(unsigned int ii = 0; ii < profs.size(); ++ii)
+  {
+    TProfile* prof = profs.at(ii);
+    prof -> SetTitle(title.c_str());
+    prof -> SetMarkerColor(colors.at(ii));
+    prof -> SetLineColor(colors.at(ii));
+    prof -> SetMarkerSize(0.5);
+    prof -> GetXaxis() -> SetRangeUser(xMin,xMax);
+    prof -> SetMinimum(yMin);
+    prof -> SetMaximum(yMax);
+    if( ii == 0 ) prof -> Draw(drawOpt.c_str());
+    else          prof -> Draw(("same,"+drawOpt).c_str());
+  }
+  
+  if( latexLabel != NULL ) latexLabel -> Draw("same");
+  
+  gPad -> Update();
+}
+
+
+
 void DrawProfile2D(CfgManager& opts,
                    const std::string& ch, TProfile2D* prof2,
                    const std::string& title,
@@ -537,6 +570,64 @@ void DrawProfile2D(CfgManager& opts,
     for(unsigned int ii = 0; ii < lines->size(); ++ii)
       lines->at(ii) -> Draw("same");
   }
+  
+  gPad -> Update();
+}
+
+
+
+void DrawGraph(CfgManager& opts,
+               const std::string& ch, TGraph* graph,
+               const std::string& title,
+               const float& xMin, const float& xMax, const float& yMin, const float& yMax,
+               const int& color, const std::string& drawOpt,
+               TLatex* latexLabel)
+{
+  std::string shortLabel = opts.GetOpt<std::string>(Form("%s.shortLabel",ch.c_str()));
+  
+  TH1F* hPad = (TH1F*)( gPad->DrawFrame(xMin,yMin,xMax,yMax) );
+  hPad -> SetTitle(title.c_str());
+  hPad -> Draw();
+  // gPad -> SetLogx();
+  gPad -> SetGridy();
+  
+  graph -> SetMarkerColor(color);
+  graph -> SetLineColor(color);
+  graph -> SetMarkerSize(0.5);
+  graph -> Draw(("same,"+drawOpt).c_str());
+  
+  if( latexLabel != NULL ) latexLabel -> Draw("same");
+  
+  gPad -> Update();
+}
+
+
+
+void DrawGraph(CfgManager& opts,
+               const std::string& ch, std::vector<TGraph*> graphs,
+               const std::string& title,
+               const float& xMin, const float& xMax, const float& yMin, const float& yMax,
+               const std::vector<int>& colors, const std::string& drawOpt,
+               TLatex* latexLabel)
+{
+  std::string shortLabel = opts.GetOpt<std::string>(Form("%s.shortLabel",ch.c_str()));
+  
+  TH1F* hPad = (TH1F*)( gPad->DrawFrame(xMin,yMin,xMax,yMax) );
+  hPad -> SetTitle(title.c_str());
+  hPad -> Draw();
+  gPad -> SetLogx();
+  gPad -> SetGridy();
+  
+  for(unsigned int ii = 0; ii < graphs.size(); ++ii)
+  {
+    TGraph* graph = graphs.at(ii);  
+    graph -> SetMarkerColor(colors.at(ii));
+    graph -> SetLineColor(colors.at(ii));
+    graph -> SetMarkerSize(0.5);
+    graph -> Draw(("same,"+drawOpt).c_str());
+  }
+  
+  if( latexLabel != NULL ) latexLabel -> Draw("same");
   
   gPad -> Update();
 }

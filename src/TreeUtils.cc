@@ -6,6 +6,7 @@ void InitTreeVars(TTree* tree, TreeVars& treeVars, CfgManager& opts)
 {
   treeVars.time    = new float[1000];
   treeVars.amp_max = new float[1000];
+  treeVars.b_rms = new float[1000];
   treeVars.nFibresOnX = new int[2];
   treeVars.nFibresOnY = new int[2];
   treeVars.hodoX = new float[2];
@@ -21,6 +22,7 @@ void InitTreeVars(TTree* tree, TreeVars& treeVars, CfgManager& opts)
   
   tree -> SetBranchAddress("time",   treeVars.time);
   tree -> SetBranchAddress("amp_max",treeVars.amp_max);
+  tree -> SetBranchAddress("b_rms",treeVars.b_rms);
   // tree -> SetBranchAddress("hodo.nFibresOnX",treeVars.nFibresOnX);
   // tree -> SetBranchAddress("hodo.nFibresOnY",treeVars.nFibresOnY);
   // tree -> SetBranchAddress("hodo.X",treeVars.hodoX);
@@ -36,11 +38,13 @@ void InitTreeVars(TTree* tree, TreeVars& treeVars, CfgManager& opts)
   std::vector<std::string> channels = opts.GetOpt<std::vector<std::string> >("Channels.channels");  
   for(auto ch : channels)
   {
-    std::string ampCh  = opts.GetOpt<std::string>(Form("%s.ampCh", ch.c_str()));
-    if( ampCh != "NULL" ) tree -> SetBranchAddress(ampCh.c_str(), &treeVars.channelIds[ampCh]);
+    std::vector<std::string> ampChs = opts.GetOpt<std::vector<std::string> >(Form("%s.ampCh", ch.c_str()));
+    for( auto ampCh : ampChs )
+      if( ampCh != "NULL" ) tree -> SetBranchAddress(ampCh.c_str(), &treeVars.channelIds[ampCh]);
     
-    std::string timeCh = opts.GetOpt<std::string>(Form("%s.timeCh",ch.c_str()));
-    if( timeCh != "NULL" ) tree -> SetBranchAddress(timeCh.c_str(), &treeVars.channelIds[timeCh]);
+    std::vector<std::string> timeChs = opts.GetOpt<std::vector<std::string> >(Form("%s.timeCh",ch.c_str()));
+    for( auto timeCh : timeChs )
+      if( timeCh != "NULL" ) tree -> SetBranchAddress(timeCh.c_str(), &treeVars.channelIds[timeCh]);
     
     std::vector<std::string> timeMethods = opts.GetOpt<std::vector<std::string> >(Form("%s.timeMethods",ch.c_str()));    
     for(auto timeMethod: timeMethods)

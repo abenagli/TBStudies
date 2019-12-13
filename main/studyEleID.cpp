@@ -203,14 +203,15 @@ int main(int argc, char** argv)
   
   //--- loop over samples
   std::vector<std::string> MVALabels_EB;
-  MVALabels_EB.push_back("eleID_MTDOnly_EB");
-  MVALabels_EB.push_back("eleID_eleOnlyNoIso_EB");
-  MVALabels_EB.push_back("eleID_eleOnlyIso_EB");
-  MVALabels_EB.push_back("eleID_eleMTDNoIso_EB");
-  MVALabels_EB.push_back("eleID_eleMTDIso_EB");
+  // MVALabels_EB.push_back("eleID_MTDOnly_EB");
+  // MVALabels_EB.push_back("eleID_MTDOnlyNewMVANoIso_EB");
+  // MVALabels_EB.push_back("eleID_eleOnlyNoIso_EB");
+  // MVALabels_EB.push_back("eleID_eleOnlyIso_EB");
+  // MVALabels_EB.push_back("eleID_eleMTDNoIso_EB");
+  // MVALabels_EB.push_back("eleID_eleMTDIso_EB");
   
   std::vector<std::string> MVALabels_EE;
-  MVALabels_EE.push_back("eleID_MTDOnly_EE");
+  // MVALabels_EE.push_back("eleID_MTDOnly_EE");
   
   std::map<std::string,std::map<std::string,std::map<float,int> > > ROC_nEvents_EB;
   std::map<std::string,std::map<std::string,std::map<float,int> > > ROC_nEvents_EE;
@@ -374,7 +375,7 @@ int main(int argc, char** argv)
     for(int entry = 0; entry < nEntries; ++entry)
     {
       if( entry%100 == 0 ) std::cout << ">>> reading entry " << entry << " / " << nEntries << "\r" << std::flush;
-      if( entry%2 != 0 ) continue;
+      // if( entry%2 != 0 ) continue;
       
       tree -> GetEntry(entry);
 
@@ -417,6 +418,7 @@ int main(int argc, char** argv)
         
         fabsEta = fabs(eta);
         mva = electrons_mva->at(eleIt);
+        // mva = MVAReaders["eleID_eleOnlyNoIso_EB"] -> EvaluateMVA(MVA_methods["eleID_eleOnlyNoIso_EB"].c_str());
         if( mva < -1 ) continue;
         // if( eta_atBTL > -100. && mva <  0.6 ) continue;
         // if( eta_atETL > -100. && mva < -0.2 ) continue;
@@ -462,7 +464,7 @@ int main(int argc, char** argv)
           
           h1_electrons_eta_atBTL -> Fill( fabs(electrons_eta_atBTL->at(eleIt)) );
           h1_electrons_phi_atBTL -> Fill( electrons_phi_atBTL->at(eleIt) );
-          h1_electrons_mva_BTL -> Fill( electrons_mva->at(eleIt) );
+          h1_electrons_mva_BTL -> Fill( mva );
           
           energySeed = 0.;
           float timeSeed = 0.;
@@ -562,7 +564,7 @@ int main(int argc, char** argv)
           {
             if( eta_atBTL > -100 && eta_atETL < -100 )
             {
-              if( electrons_mva->at(eleIt) >= val )
+              if( mva >= val )
                 ROC_nEvents_EB["old"][label][val] += 1;
             }
           }
@@ -593,7 +595,7 @@ int main(int argc, char** argv)
           
           h1_electrons_eta_atETL -> Fill( fabs(electrons_eta_atETL->at(eleIt)) );
           h1_electrons_phi_atETL -> Fill( electrons_phi_atETL->at(eleIt) );
-          h1_electrons_mva_ETL -> Fill( electrons_mva->at(eleIt) );
+          h1_electrons_mva_ETL -> Fill( mva );
           
           energySeed = 0.;
           float timeSeed = 0.;
@@ -693,7 +695,7 @@ int main(int argc, char** argv)
           {
             if( eta_atETL > -100 && eta_atBTL < -100 )
             {
-              if( electrons_mva->at(eleIt) >= val )
+              if( mva >= val )
                 ROC_nEvents_EE["old"][label][val] += 1;
             }
           }
