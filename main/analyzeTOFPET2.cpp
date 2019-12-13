@@ -185,18 +185,24 @@ int main(int argc, char** argv)
   std::map<unsigned int,std::map<float,float> > cut_qfineAcc;
   std::map<unsigned int,std::map<float,float> > cut_totAcc;
   std::map<unsigned int,std::map<float,float> > cut_energyAcc;
+  std::map<unsigned int,std::map<float,float> > cut_energyFitMin;
+  std::map<unsigned int,std::map<float,float> > cut_energyFitMax;
   for(auto ch :  channels)
   {
-    std::vector<float> Vovs       = opts.GetOpt<std::vector<float> >(Form("ch%d.Vovs",int(ch)));
-    std::vector<float> qfineMins  = opts.GetOpt<std::vector<float> >(Form("ch%d.qfineMins",int(ch)));
-    std::vector<float> totMins    = opts.GetOpt<std::vector<float> >(Form("ch%d.totMins",int(ch)));
-    std::vector<float> energyMins = opts.GetOpt<std::vector<float> >(Form("ch%d.energyMins",int(ch)));
+    std::vector<float> Vovs          = opts.GetOpt<std::vector<float> >(Form("ch%d.Vovs",int(ch)));
+    std::vector<float> qfineMins     = opts.GetOpt<std::vector<float> >(Form("ch%d.qfineMins",int(ch)));
+    std::vector<float> totMins       = opts.GetOpt<std::vector<float> >(Form("ch%d.totMins",int(ch)));
+    std::vector<float> energyMins    = opts.GetOpt<std::vector<float> >(Form("ch%d.energyMins",int(ch)));
+    std::vector<float> energyFitMins = opts.GetOpt<std::vector<float> >(Form("ch%d.energyFitMins",int(ch)));
+    std::vector<float> energyFitMaxs = opts.GetOpt<std::vector<float> >(Form("ch%d.energyFitMaxs",int(ch)));
     int iter = 0;
     for(auto Vov : Vovs)
     {
       cut_qfineAcc[ch][Vov]  = qfineMins.at(iter);
       cut_totAcc[ch][Vov]    = totMins.at(iter);
       cut_energyAcc[ch][Vov] = energyMins.at(iter);
+      cut_energyFitMin[ch][Vov] = energyFitMins.at(iter);
+      cut_energyFitMax[ch][Vov] = energyFitMaxs.at(iter);
       ++iter;
     }
   }
@@ -542,7 +548,7 @@ int main(int argc, char** argv)
       h1_tot[label] -> Draw();
       max1 = FindXMaximum(h1_tot[label],cut_totAcc[ch][Vov],1000.);
       h1_tot[label] -> GetXaxis() -> SetRangeUser(0.25*max1,2.*max1);
-      TF1* fitFunc1 = new TF1("fitFunc1","pol2",max1-0.05*max1,max1+0.05*max1);
+      TF1* fitFunc1 = new TF1("fitFunc1","gaus",max1-0.05*max1,max1+0.05*max1);
       h1_tot[label] -> Fit(fitFunc1,"QNRS+");
       fitFunc1 -> SetLineColor(kBlack);
       fitFunc1 -> SetLineWidth(3);
@@ -581,13 +587,13 @@ int main(int argc, char** argv)
       h1_energy[label] -> Draw();
       max1 = FindXMaximum(h1_energy[label],cut_energyAcc[ch][Vov],100.);
       h1_energy[label] -> GetXaxis() -> SetRangeUser(0.1*max1,2.5*max1);
-      fitFunc1 = new TF1("fitFunc1","pol2",max1-0.075*max1,max1+0.075*max1);
+      fitFunc1 = new TF1("fitFunc1","gaus",max1-cut_energyFitMin[ch][Vov]*max1,max1+cut_energyFitMax[ch][Vov]*max1);
       h1_energy[label] -> Fit(fitFunc1,"QNRS+");
       fitFunc1 -> SetLineColor(kBlack);
       fitFunc1 -> SetLineWidth(3);
       fitFunc1 -> Draw("same");
-      cut_energyMin[Form("ch%d_%s",ch,stepLabel.c_str())] = 0.9*fitFunc1->GetMaximumX();
-      cut_energyMax[Form("ch%d_%s",ch,stepLabel.c_str())] = 1.1*fitFunc1->GetMaximumX();
+      cut_energyMin[Form("ch%d_%s",ch,stepLabel.c_str())] = fitFunc1->GetMaximumX()-cut_energyFitMin[ch][Vov]*fitFunc1->GetMaximumX();
+      cut_energyMax[Form("ch%d_%s",ch,stepLabel.c_str())] = fitFunc1->GetMaximumX()+cut_energyFitMax[ch][Vov]*fitFunc1->GetMaximumX();
       TLine* line_energyMin1 = new TLine(cut_energyMin[Form("ch%d_%s",ch,stepLabel.c_str())],h1_energy[label]->GetMinimum(),cut_energyMin[Form("ch%d_%s",ch,stepLabel.c_str())],h1_energy[label]->GetMaximum());
       line_energyMin1 -> SetLineColor(kBlack);
       line_energyMin1 -> Draw("same");
