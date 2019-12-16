@@ -515,8 +515,7 @@ int main(int argc, char** argv)
       h1_qfine[label] -> SetTitle(";Q_{fine} [ADC];entries");
       h1_qfine[label] -> SetLineColor(kRed);
       h1_qfine[label] -> Draw();
-      float max1 = FindXMaximum(h1_qfine[label],cut_qfineAcc[ch][Vov],1000.);
-      h1_qfine[label] -> GetXaxis() -> SetRangeUser(0.1*max1,2.5*max1);
+      h1_qfine[label] -> GetXaxis() -> SetRangeUser(12,200);
       TLine* line_qfineAcc1 = new TLine(cut_qfineAcc[ch][Vov],h1_qfine[label]->GetMinimum(),cut_qfineAcc[ch][Vov],h1_qfine[label]->GetMaximum());
       line_qfineAcc1 -> SetLineColor(kBlack);
       line_qfineAcc1 -> Draw("same");
@@ -546,7 +545,7 @@ int main(int argc, char** argv)
       h1_tot[label] -> SetTitle(";ToT [ns];entries");
       h1_tot[label] -> SetLineColor(kRed);
       h1_tot[label] -> Draw();
-      max1 = FindXMaximum(h1_tot[label],cut_totAcc[ch][Vov],1000.);
+      float max1 = FindXMaximum(h1_tot[label],cut_totAcc[ch][Vov],1000.);
       h1_tot[label] -> GetXaxis() -> SetRangeUser(0.25*max1,2.*max1);
       TF1* fitFunc1 = new TF1("fitFunc1","gaus",max1-0.05*max1,max1+0.05*max1);
       h1_tot[label] -> Fit(fitFunc1,"QNRS+");
@@ -874,12 +873,18 @@ int main(int argc, char** argv)
   for(auto mapIt : eventsSingle)
   {
     std::string label = mapIt.first;
-    
+    float Vov = map_Vovs[label];
+        
     nEntries = mapIt.second.size();
     for(int entry = 0; entry < nEntries; ++entry)
     {
       if( entry%1000 == 0 ) std::cout << ">>> 2nd loop: reading entry " << entry << " / " << nEntries << " (" << 100.*entry/nEntries << "%)" << "\r" << std::flush;
       EventSingle anEvent = mapIt.second.at(entry);
+      
+      if( anEvent.qfine1 < cut_qfineAcc[anEvent.ch1][Vov] ) continue;
+      if( anEvent.qfine2 < cut_qfineAcc[anEvent.ch2][Vov] ) continue;
+      if( anEvent.tot1 < cut_totAcc[anEvent.ch1][Vov] ) continue;
+      if( anEvent.tot2 < cut_totAcc[anEvent.ch2][Vov] ) continue;
       
       if( anEvent.energy1 > cut_energyMin[Form("ch%d_%s",anEvent.ch1,anEvent.stepLabel.c_str())] &&
           anEvent.energy1 < cut_energyMax[Form("ch%d_%s",anEvent.ch1,anEvent.stepLabel.c_str())] )
@@ -909,6 +914,8 @@ int main(int argc, char** argv)
       anEvent2.qfine2 = anEvent.qfine2;
       anEvent2.tot1 = anEvent.tot1;
       anEvent2.tot2 = anEvent.tot2;
+      anEvent2.energy1 = anEvent.energy1;
+      anEvent2.energy2 = anEvent.energy2;
       anEvent2.time1 = anEvent.time1;
       anEvent2.time2 = anEvent.time2;
       eventsSingle2[anEvent.label12].push_back(anEvent2);
@@ -958,6 +965,10 @@ int main(int argc, char** argv)
       anEvent2.tot2 = anEvent.tot2;
       anEvent2.tot3 = anEvent.tot3;
       anEvent2.tot4 = anEvent.tot4;
+      anEvent2.energy1 = anEvent.energy1;
+      anEvent2.energy2 = anEvent.energy2;
+      anEvent2.energy3 = anEvent.energy3;
+      anEvent2.energy4 = anEvent.energy4;
       anEvent2.time1 = anEvent.time1;
       anEvent2.time2 = anEvent.time2;
       anEvent2.time3 = anEvent.time3;
@@ -1319,8 +1330,8 @@ int main(int argc, char** argv)
       
       c = new TCanvas(Form("c_deltaT_energyCorr_%s",label12.c_str()),Form("c_deltaT_energyCorr_%s",label12.c_str()));
       
-      h1_deltaT_energyCorr[label12] -> GetXaxis() -> SetRangeUser(h1_deltaT_energyCorr[label12]->GetMean()-5.*h1_deltaT_energyCorr[label12]->GetRMS(),
-                                                               h1_deltaT_energyCorr[label12]->GetMean()+5.*h1_deltaT_energyCorr[label12]->GetRMS());          
+      h1_deltaT_energyCorr[label12] -> GetXaxis() -> SetRangeUser(h1_deltaT_energyCorr[label12]->GetMean()-2.*h1_deltaT_energyCorr[label12]->GetRMS(),
+                                                                  h1_deltaT_energyCorr[label12]->GetMean()+2.*h1_deltaT_energyCorr[label12]->GetRMS());          
       h1_deltaT_energyCorr[label12] -> SetTitle(Form(";energy-corrected #Deltat [ps];entries"));
       h1_deltaT_energyCorr[label12] -> SetLineWidth(2);
       h1_deltaT_energyCorr[label12] -> SetLineColor(kBlue);
@@ -1414,6 +1425,8 @@ int main(int argc, char** argv)
       delta = max-min;
       sigma = 0.5*delta;
       effSigma = sigma;
+      
+      h1_deltaT_energyCorr[label12] -> GetXaxis() -> SetRangeUser(mean-5.*sigma,mean+5.*sigma);
       
       latex = new TLatex(0.55,0.65,Form("#splitline{raw #sigma_{CTR}^{eff} = %.1f ps}{raw #sigma_{CTR}^{gaus} = %.1f ps}",effSigma,fitFunc->GetParameter(2)));
       latex -> SetNDC();
@@ -1583,7 +1596,7 @@ int main(int argc, char** argv)
     c = new TCanvas(Form("c_tRes_vs_th_ch%d-ch%d",ch1,ch2),Form("c_tRes_vs_th_ch%d-ch%d",ch1,ch2));
     // gPad -> SetLogy();
     
-    TH1F* hPad = (TH1F*)( gPad->DrawFrame(-1.,0.,64.,150.) );
+    TH1F* hPad = (TH1F*)( gPad->DrawFrame(-1.,0.,64.,250.) );
     if( pairsMode == 1 )
       hPad -> SetTitle(";threshold [DAC];#sigma_{t_{diff}} / #sqrt{2} [ps]");
     if( pairsMode == 2 )
@@ -1644,7 +1657,7 @@ int main(int argc, char** argv)
     c = new TCanvas(Form("c_tRes_vs_th_ch%d+ch%d-ch%d+ch%d",ch1,ch2,ch3,ch4),Form("c_tRes_vs_th_ch%d+ch%d-ch%d+ch%d",ch1,ch2,ch3,ch4));
     // gPad -> SetLogy();
     
-    TH1F* hPad = (TH1F*)( gPad->DrawFrame(-1.,0.,64.,150.) );
+    TH1F* hPad = (TH1F*)( gPad->DrawFrame(-1.,0.,64.,250.) );
     hPad -> SetTitle(";threshold [DAC];#sigma_{CTR} / #sqrt{2} [ps]");
     hPad -> Draw();
     gPad -> SetGridy();
@@ -1704,7 +1717,7 @@ int main(int argc, char** argv)
     c = new TCanvas(Form("c_tRes_vs_Vov_ch%d-ch%d",ch1,ch2),Form("c_tRes_vs_Vov_ch%d-ch%d",ch1,ch2));
     // gPad -> SetLogy();
     
-    TH1F* hPad = (TH1F*)( gPad->DrawFrame(0.,0.,10.,150.) );
+    TH1F* hPad = (TH1F*)( gPad->DrawFrame(0.,0.,10.,250.) );
     hPad -> SetTitle(";V_{ov} [V];#sigma_{t_{diff}} / 2 [ps]");
     hPad -> Draw();
     gPad -> SetGridy();
@@ -1762,7 +1775,7 @@ int main(int argc, char** argv)
     c = new TCanvas(Form("c_tRes_vs_Vov_ch%d+ch%d-ch%d+ch%d",ch1,ch2,ch3,ch4),Form("c_tRes_vs_Vov_ch%d+ch%d-ch%d+ch%d",ch1,ch2,ch3,ch4));
     // gPad -> SetLogy();
     
-    TH1F* hPad = (TH1F*)( gPad->DrawFrame(0.,0.,10.,150.) );
+    TH1F* hPad = (TH1F*)( gPad->DrawFrame(0.,0.,10.,250.) );
     hPad -> SetTitle(";V_{ov} [V];#sigma_{CTR} / #sqrt{2} [ps]");
     hPad -> Draw();
     gPad -> SetGridy();

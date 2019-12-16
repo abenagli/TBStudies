@@ -30,3 +30,9 @@
 *.exe
 *.out
 *.app
+
+# Root files
+*.root
+
+# HTCondor files
+*.sub
