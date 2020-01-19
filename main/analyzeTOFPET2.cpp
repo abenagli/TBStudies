@@ -135,6 +135,7 @@ int main(int argc, char** argv)
   
   //--- open files and make the tree chain
   std::string inputDir = opts.GetOpt<std::string>("Input.inputDir");
+  std::string fileBaseName = opts.GetOpt<std::string>("Input.fileBaseName");
   std::string runs = opts.GetOpt<std::string>("Input.runs");
   int maxEntries = opts.GetOpt<int>("Input.maxEntries");
   TChain* tree = new TChain("data","data");
@@ -155,7 +156,7 @@ int main(int argc, char** argv)
       for(int run = runMin; run <= runMax; ++run)
 	{
 	  //std::string fileName = Form("%s/*%04d*.root",inputDir.c_str(),run);
-	  std::string fileName = Form("%s/*%d*.root",inputDir.c_str(),run);
+	  std::string fileName = Form("%s/*%s*%d*.root",inputDir.c_str(),fileBaseName.c_str(),run);
 	  std::cout << ">>> Adding flle " << fileName << std::endl;
 	  tree -> Add(fileName.c_str());
 	}
@@ -165,7 +166,7 @@ int main(int argc, char** argv)
   //--- define channels
   std::vector<unsigned int> channels = opts.GetOpt<std::vector<unsigned int> >("Channels.channels");
   
-  int pairsMode = opts.GetOpt<int>("Channels.pairsMode");
+  std::vector<int> pairsMode = opts.GetOpt<std::vector<int> >("Channels.pairsMode");
   std::vector<unsigned int> pairs = opts.GetOpt<std::vector<unsigned int> >("Channels.pairs");
   std::vector<std::pair<unsigned int,unsigned int> > pairsVec;
   for(unsigned int ii = 0; ii < pairs.size()/2; ++ii)
@@ -208,6 +209,11 @@ int main(int argc, char** argv)
   }
   std::map<std::string,float> cut_energyMin;
   std::map<std::string,float> cut_energyMax;
+  
+  
+  //--- get plot settings
+  float tResMin = opts.GetOpt<float>("Plots.tResMin");
+  float tResMax = opts.GetOpt<float>("Plots.tResMax");
   
   
   //--- define branches
@@ -312,11 +318,11 @@ int main(int argc, char** argv)
         h2_energy_corr[label12] = new TH2F(Form("h2_energy_corr_%s",label12.c_str()),"",200,0.,50.,200,0.,50.);
         h1_energyRatio[label12] = new TH1F(Form("h1_energyRatio_%s",label12.c_str()),"",1000,0.,5.);
         
-        h1_deltaT_raw[label12] = new TH1F(Form("h1_deltaT_raw_%s",label12.c_str()),"",5000,-10000.,10000.);
-        h1_deltaT[label12] = new TH1F(Form("h1_deltaT_%s",label12.c_str()),"",5000,-10000.,10000.);
+        h1_deltaT_raw[label12] = new TH1F(Form("h1_deltaT_raw_%s",label12.c_str()),"",1250,-2500.,2500.);
+        h1_deltaT[label12] = new TH1F(Form("h1_deltaT_%s",label12.c_str()),"",1250,-2500,2500.);
         p1_deltaT_vs_energyRatio[label12] = new TProfile(Form("p1_deltaT_vs_energyRatio_%s",label12.c_str()),"",1000,0.,5.);
         
-        h1_deltaT_energyCorr[label12] = new TH1F(Form("h1_deltaT_energyCorr_%s",label12.c_str()),"",5000,-10000.,10000.);
+        h1_deltaT_energyCorr[label12] = new TH1F(Form("h1_deltaT_energyCorr_%s",label12.c_str()),"",1250,-2500.,2500.);
       }
     }
     for(auto bar : barsVec)
@@ -1317,6 +1323,7 @@ int main(int argc, char** argv)
     std::string VovLabel(Form("Vov%.1f",Vov));
     std::string thLabel(Form("th%02.0f",th));
     
+    int pairsIt = 0;
     for(auto pair : pairsVec)
     {
       unsigned int ch1 = pair.first;
@@ -1377,7 +1384,19 @@ int main(int argc, char** argv)
         g_tRes_energyCorr_gaus_vs_Vov[Form("ch%d-ch%d_%s",ch1,ch2,thLabel.c_str())] = new TGraphErrors();
       } 
       
-      if( pairsMode == 1 )
+      if( pairsMode.at(pairsIt) == 0 )
+      {
+        g_tRes_effSigma_vs_th[Form("ch%d-ch%d_%s",ch1,ch2,VovLabel.c_str())] -> SetPoint(g_tRes_effSigma_vs_th[Form("ch%d-ch%d_%s",ch1,ch2,VovLabel.c_str())]->GetN(),th,effSigma);
+        g_tRes_effSigma_vs_th[Form("ch%d-ch%d_%s",ch1,ch2,VovLabel.c_str())] -> SetPointError(g_tRes_effSigma_vs_th[Form("ch%d-ch%d_%s",ch1,ch2,VovLabel.c_str())]->GetN()-1,0.,5.);
+        g_tRes_gaus_vs_th[Form("ch%d-ch%d_%s",ch1,ch2,VovLabel.c_str())] -> SetPoint(g_tRes_gaus_vs_th[Form("ch%d-ch%d_%s",ch1,ch2,VovLabel.c_str())]->GetN(),th,fitFunc->GetParameter(2));
+        g_tRes_gaus_vs_th[Form("ch%d-ch%d_%s",ch1,ch2,VovLabel.c_str())] -> SetPointError(g_tRes_gaus_vs_th[Form("ch%d-ch%d_%s",ch1,ch2,VovLabel.c_str())]->GetN()-1,0.,fitFunc->GetParError(2));
+        
+        g_tRes_effSigma_vs_Vov[Form("ch%d-ch%d_%s",ch1,ch2,thLabel.c_str())] -> SetPoint(g_tRes_effSigma_vs_Vov[Form("ch%d-ch%d_%s",ch1,ch2,thLabel.c_str())]->GetN(),Vov,effSigma);
+        g_tRes_effSigma_vs_Vov[Form("ch%d-ch%d_%s",ch1,ch2,thLabel.c_str())] -> SetPointError(g_tRes_effSigma_vs_Vov[Form("ch%d-ch%d_%s",ch1,ch2,thLabel.c_str())]->GetN()-1,0.,5.);
+        g_tRes_gaus_vs_Vov[Form("ch%d-ch%d_%s",ch1,ch2,thLabel.c_str())] -> SetPoint(g_tRes_gaus_vs_Vov[Form("ch%d-ch%d_%s",ch1,ch2,thLabel.c_str())]->GetN(),Vov,fitFunc->GetParameter(2));
+        g_tRes_gaus_vs_Vov[Form("ch%d-ch%d_%s",ch1,ch2,thLabel.c_str())] -> SetPointError(g_tRes_gaus_vs_Vov[Form("ch%d-ch%d_%s",ch1,ch2,thLabel.c_str())]->GetN()-1,0.,fitFunc->GetParError(2));
+      }
+      if( pairsMode.at(pairsIt) == 1 )
       {
         g_tRes_effSigma_vs_th[Form("ch%d-ch%d_%s",ch1,ch2,VovLabel.c_str())] -> SetPoint(g_tRes_effSigma_vs_th[Form("ch%d-ch%d_%s",ch1,ch2,VovLabel.c_str())]->GetN(),th,effSigma/sqrt(2));
         g_tRes_effSigma_vs_th[Form("ch%d-ch%d_%s",ch1,ch2,VovLabel.c_str())] -> SetPointError(g_tRes_effSigma_vs_th[Form("ch%d-ch%d_%s",ch1,ch2,VovLabel.c_str())]->GetN()-1,0.,5.);
@@ -1389,7 +1408,7 @@ int main(int argc, char** argv)
         g_tRes_gaus_vs_Vov[Form("ch%d-ch%d_%s",ch1,ch2,thLabel.c_str())] -> SetPoint(g_tRes_gaus_vs_Vov[Form("ch%d-ch%d_%s",ch1,ch2,thLabel.c_str())]->GetN(),Vov,fitFunc->GetParameter(2)/sqrt(2));
         g_tRes_gaus_vs_Vov[Form("ch%d-ch%d_%s",ch1,ch2,thLabel.c_str())] -> SetPointError(g_tRes_gaus_vs_Vov[Form("ch%d-ch%d_%s",ch1,ch2,thLabel.c_str())]->GetN()-1,0.,fitFunc->GetParError(2)/sqrt(2));
       }
-      if( pairsMode == 2 )
+      if( pairsMode.at(pairsIt) == 2 )
       {
         g_tRes_effSigma_vs_th[Form("ch%d-ch%d_%s",ch1,ch2,VovLabel.c_str())] -> SetPoint(g_tRes_effSigma_vs_th[Form("ch%d-ch%d_%s",ch1,ch2,VovLabel.c_str())]->GetN(),th,effSigma/2);
         g_tRes_effSigma_vs_th[Form("ch%d-ch%d_%s",ch1,ch2,VovLabel.c_str())] -> SetPointError(g_tRes_effSigma_vs_th[Form("ch%d-ch%d_%s",ch1,ch2,VovLabel.c_str())]->GetN()-1,0.,5.);
@@ -1435,7 +1454,19 @@ int main(int argc, char** argv)
       latex -> SetTextColor(kRed);
       latex -> Draw("same");
       
-      if( pairsMode == 1 )
+      if( pairsMode.at(pairsIt) == 0 )
+      {
+        g_tRes_energyCorr_effSigma_vs_th[Form("ch%d-ch%d_%s",ch1,ch2,VovLabel.c_str())] -> SetPoint(g_tRes_energyCorr_effSigma_vs_th[Form("ch%d-ch%d_%s",ch1,ch2,VovLabel.c_str())]->GetN(),th,effSigma);
+        g_tRes_energyCorr_effSigma_vs_th[Form("ch%d-ch%d_%s",ch1,ch2,VovLabel.c_str())] -> SetPointError(g_tRes_energyCorr_effSigma_vs_th[Form("ch%d-ch%d_%s",ch1,ch2,VovLabel.c_str())]->GetN()-1,0.,5.);
+        g_tRes_energyCorr_gaus_vs_th[Form("ch%d-ch%d_%s",ch1,ch2,VovLabel.c_str())] -> SetPoint(g_tRes_energyCorr_gaus_vs_th[Form("ch%d-ch%d_%s",ch1,ch2,VovLabel.c_str())]->GetN(),th,fitFunc->GetParameter(2));
+        g_tRes_energyCorr_gaus_vs_th[Form("ch%d-ch%d_%s",ch1,ch2,VovLabel.c_str())] -> SetPointError(g_tRes_energyCorr_gaus_vs_th[Form("ch%d-ch%d_%s",ch1,ch2,VovLabel.c_str())]->GetN()-1,0.,fitFunc->GetParError(2));
+        
+        g_tRes_energyCorr_effSigma_vs_Vov[Form("ch%d-ch%d_%s",ch1,ch2,thLabel.c_str())] -> SetPoint(g_tRes_energyCorr_effSigma_vs_Vov[Form("ch%d-ch%d_%s",ch1,ch2,thLabel.c_str())]->GetN(),Vov,effSigma);
+        g_tRes_energyCorr_effSigma_vs_Vov[Form("ch%d-ch%d_%s",ch1,ch2,thLabel.c_str())] -> SetPointError(g_tRes_energyCorr_effSigma_vs_Vov[Form("ch%d-ch%d_%s",ch1,ch2,thLabel.c_str())]->GetN()-1,0.,5.);
+        g_tRes_energyCorr_gaus_vs_Vov[Form("ch%d-ch%d_%s",ch1,ch2,thLabel.c_str())] -> SetPoint(g_tRes_energyCorr_gaus_vs_Vov[Form("ch%d-ch%d_%s",ch1,ch2,thLabel.c_str())]->GetN(),Vov,fitFunc->GetParameter(2));
+        g_tRes_energyCorr_gaus_vs_Vov[Form("ch%d-ch%d_%s",ch1,ch2,thLabel.c_str())] -> SetPointError(g_tRes_energyCorr_gaus_vs_Vov[Form("ch%d-ch%d_%s",ch1,ch2,thLabel.c_str())]->GetN()-1,0.,fitFunc->GetParError(2));
+      }
+      if( pairsMode.at(pairsIt) == 1 )
       {
         g_tRes_energyCorr_effSigma_vs_th[Form("ch%d-ch%d_%s",ch1,ch2,VovLabel.c_str())] -> SetPoint(g_tRes_energyCorr_effSigma_vs_th[Form("ch%d-ch%d_%s",ch1,ch2,VovLabel.c_str())]->GetN(),th,effSigma/sqrt(2));
         g_tRes_energyCorr_effSigma_vs_th[Form("ch%d-ch%d_%s",ch1,ch2,VovLabel.c_str())] -> SetPointError(g_tRes_energyCorr_effSigma_vs_th[Form("ch%d-ch%d_%s",ch1,ch2,VovLabel.c_str())]->GetN()-1,0.,5.);
@@ -1447,7 +1478,7 @@ int main(int argc, char** argv)
         g_tRes_energyCorr_gaus_vs_Vov[Form("ch%d-ch%d_%s",ch1,ch2,thLabel.c_str())] -> SetPoint(g_tRes_energyCorr_gaus_vs_Vov[Form("ch%d-ch%d_%s",ch1,ch2,thLabel.c_str())]->GetN(),Vov,fitFunc->GetParameter(2)/sqrt(2));
         g_tRes_energyCorr_gaus_vs_Vov[Form("ch%d-ch%d_%s",ch1,ch2,thLabel.c_str())] -> SetPointError(g_tRes_energyCorr_gaus_vs_Vov[Form("ch%d-ch%d_%s",ch1,ch2,thLabel.c_str())]->GetN()-1,0.,fitFunc->GetParError(2)/sqrt(2));
       }
-      if( pairsMode == 2 )
+      if( pairsMode.at(pairsIt) == 2 )
       {
         g_tRes_energyCorr_effSigma_vs_th[Form("ch%d-ch%d_%s",ch1,ch2,VovLabel.c_str())] -> SetPoint(g_tRes_energyCorr_effSigma_vs_th[Form("ch%d-ch%d_%s",ch1,ch2,VovLabel.c_str())]->GetN(),th,effSigma/2.);
         g_tRes_energyCorr_effSigma_vs_th[Form("ch%d-ch%d_%s",ch1,ch2,VovLabel.c_str())] -> SetPointError(g_tRes_energyCorr_effSigma_vs_th[Form("ch%d-ch%d_%s",ch1,ch2,VovLabel.c_str())]->GetN()-1,0.,5.);
@@ -1462,6 +1493,8 @@ int main(int argc, char** argv)
       
       c -> Print(Form("%s/CTR_energyCorr/c_deltaT_energyCorr_%s.png",plotDir.c_str(),label12.c_str()));
       c -> Print(Form("%s/CTR_energyCorr/c_deltaT_energyCorr_%s.pdf",plotDir.c_str(),label12.c_str()));
+      
+      ++pairsIt;
     }
     
     
@@ -1586,8 +1619,9 @@ int main(int argc, char** argv)
   
   
   //--------------------------------------------------------
-  std::cout << "qui " << std::endl;
   
+  
+  int pairsIt = 0;
   for(auto pair : pairsVec)
   {
     unsigned int ch1 = pair.first;
@@ -1596,10 +1630,12 @@ int main(int argc, char** argv)
     c = new TCanvas(Form("c_tRes_vs_th_ch%d-ch%d",ch1,ch2),Form("c_tRes_vs_th_ch%d-ch%d",ch1,ch2));
     // gPad -> SetLogy();
     
-    TH1F* hPad = (TH1F*)( gPad->DrawFrame(-1.,0.,64.,250.) );
-    if( pairsMode == 1 )
+    TH1F* hPad = (TH1F*)( gPad->DrawFrame(-1.,tResMin,64.,tResMax) );
+    if( pairsMode.at(pairsIt) == 0 )
+      hPad -> SetTitle(";threshold [DAC];#sigma_{t_{diff}} [ps]");
+    if( pairsMode.at(pairsIt) == 1 )
       hPad -> SetTitle(";threshold [DAC];#sigma_{t_{diff}} / #sqrt{2} [ps]");
-    if( pairsMode == 2 )
+    if( pairsMode.at(pairsIt) == 2 )
       hPad -> SetTitle(";threshold [DAC];#sigma_{t_{diff}} / 2 [ps]");
     hPad -> Draw();
     gPad -> SetGridy();
@@ -1645,6 +1681,8 @@ int main(int argc, char** argv)
     
     c -> Print(Form("%s/c_tRes_vs_th_ch%d-ch%d.png",plotDir.c_str(),ch1,ch2));
     c -> Print(Form("%s/c_tRes_vs_th_ch%d-ch%d.pdf",plotDir.c_str(),ch1,ch2));
+    
+    ++pairsIt;
   }
   
   for(auto bar : barsVec)
@@ -1657,7 +1695,7 @@ int main(int argc, char** argv)
     c = new TCanvas(Form("c_tRes_vs_th_ch%d+ch%d-ch%d+ch%d",ch1,ch2,ch3,ch4),Form("c_tRes_vs_th_ch%d+ch%d-ch%d+ch%d",ch1,ch2,ch3,ch4));
     // gPad -> SetLogy();
     
-    TH1F* hPad = (TH1F*)( gPad->DrawFrame(-1.,0.,64.,250.) );
+    TH1F* hPad = (TH1F*)( gPad->DrawFrame(-1.,tResMin,64.,tResMax) );
     hPad -> SetTitle(";threshold [DAC];#sigma_{CTR} / #sqrt{2} [ps]");
     hPad -> Draw();
     gPad -> SetGridy();
@@ -1717,7 +1755,7 @@ int main(int argc, char** argv)
     c = new TCanvas(Form("c_tRes_vs_Vov_ch%d-ch%d",ch1,ch2),Form("c_tRes_vs_Vov_ch%d-ch%d",ch1,ch2));
     // gPad -> SetLogy();
     
-    TH1F* hPad = (TH1F*)( gPad->DrawFrame(0.,0.,10.,250.) );
+    TH1F* hPad = (TH1F*)( gPad->DrawFrame(0.,tResMin,10.,tResMax) );
     hPad -> SetTitle(";V_{ov} [V];#sigma_{t_{diff}} / 2 [ps]");
     hPad -> Draw();
     gPad -> SetGridy();
@@ -1775,7 +1813,7 @@ int main(int argc, char** argv)
     c = new TCanvas(Form("c_tRes_vs_Vov_ch%d+ch%d-ch%d+ch%d",ch1,ch2,ch3,ch4),Form("c_tRes_vs_Vov_ch%d+ch%d-ch%d+ch%d",ch1,ch2,ch3,ch4));
     // gPad -> SetLogy();
     
-    TH1F* hPad = (TH1F*)( gPad->DrawFrame(0.,0.,10.,250.) );
+    TH1F* hPad = (TH1F*)( gPad->DrawFrame(0.,tResMin,10.,tResMax) );
     hPad -> SetTitle(";V_{ov} [V];#sigma_{CTR} / #sqrt{2} [ps]");
     hPad -> Draw();
     gPad -> SetGridy();
