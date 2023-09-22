@@ -1,12 +1,9 @@
-#include "interface/SetTDRStyle.h"
-
+#include "TStyle.h"
 
 
 void fixOverlay() {
   gPad->RedrawAxis();
 }
-
-
 
 void setTDRStyle() {
   TStyle *tdrStyle = new TStyle("tdrStyle","Style for P-TDR");
@@ -81,10 +78,10 @@ void setTDRStyle() {
   // tdrStyle->SetStatY(Float_t y = 0);
 
 // Margins:
-  tdrStyle->SetPadTopMargin(0.06);
+  tdrStyle->SetPadTopMargin(0.05);
   tdrStyle->SetPadBottomMargin(0.13);
   tdrStyle->SetPadLeftMargin(0.16);
-  tdrStyle->SetPadRightMargin(0.20);
+  tdrStyle->SetPadRightMargin(0.02);
 
 // For the Global title:
 
@@ -110,7 +107,6 @@ void setTDRStyle() {
   // tdrStyle->SetTitleYSize(Float_t size = 0.02);
   tdrStyle->SetTitleXOffset(0.9);
   tdrStyle->SetTitleYOffset(1.25);
-  tdrStyle->SetTitleOffset(1.25,"Z");
   // tdrStyle->SetTitleOffset(1.1, "Y"); // Another way to set the Offset
 
 // For the axis labels:
@@ -118,7 +114,7 @@ void setTDRStyle() {
   tdrStyle->SetLabelColor(1, "XYZ");
   tdrStyle->SetLabelFont(42, "XYZ");
   tdrStyle->SetLabelOffset(0.007, "XYZ");
-  tdrStyle->SetLabelSize(0.04, "XYZ");
+  tdrStyle->SetLabelSize(0.05, "XYZ");
 
 // For the axis:
 
@@ -126,8 +122,8 @@ void setTDRStyle() {
   tdrStyle->SetStripDecimals(kTRUE);
   tdrStyle->SetTickLength(0.03, "XYZ");
   tdrStyle->SetNdivisions(510, "XYZ");
-  // tdrStyle->SetPadTickX(1);  // To get tick marks on the opposite side of the frame
-  // tdrStyle->SetPadTickY(1);
+  tdrStyle->SetPadTickX(1);  // To get tick marks on the opposite side of the frame
+  tdrStyle->SetPadTickY(1);
 
 // Change for log plots:
   tdrStyle->SetOptLogx(0);
@@ -150,8 +146,7 @@ void setTDRStyle() {
 
   tdrStyle->SetHatchesLineWidth(5);
   tdrStyle->SetHatchesSpacing(0.05);
-  
-  tdrStyle->SetPaintTextFormat(".1f");
-  
+
   tdrStyle->cd();
+
 }
